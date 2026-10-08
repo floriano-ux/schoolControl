@@ -1,0 +1,37 @@
+.DS_Store
+.idea
+.env
+tmp
+result
+node_modules
+bin
+*.iml
+Generated
+dist
+dist-newstyle
+*.dyn_hi
+*.dyn_o
+*.hi
+*.o
+build
+gen
+del
+static/prod.*
+Config/client_session_key.aes
+
+# Ignore locally checked out IHP version
+IHP
+
+# Devenv e Direnv
+.devenv*
+.direnv
+devenv.local.nix
+
+# Configurações locais de IDE / Ferramentas
+.claude/
+CLAUDE.md
+AGENTS.md
+
+# Arquivos de log e temporários gerais
+*.log
+.DS_Store
