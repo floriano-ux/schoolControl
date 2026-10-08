@@ -1,43 +1,46 @@
-# IHP Project
+# SGA Funcional - Sistema de Gestão Académica (IHP + Haskell)
 
-This is an IHP (Integrated Haskell Platform) project with a GitHub Actions workflow for continuous integration. For more information about IHP, see the [IHP Documentation](https://ihp.digitallyinduced.com/Guide/).
+Projeto desenvolvido para a disciplina de **Programação Funcional**, utilizando a arquitetura web pura em Haskell através do **IHP (Integrated Haskell Platform)**, **PostgreSQL** e **Nix** para reprodutibilidade de ambiente.
 
-## GitHub Actions Workflow
+---
 
-This project includes a GitHub Actions workflow that builds the project and runs its test suite via `nix flake check`. The workflow is defined in [`.github/workflows/nix-flake-check.yml`](.github/workflows/nix-flake-check.yml).
+## Sobre o Projeto
 
-### Workflow Triggers
+O **SGA Funcional** é um sistema de gestão académica para controlo de alunos, cursos, matrículas e avaliação de desempenho académico. A lógica de negócio foca-se nos princípios do paradigma funcional puro, aplicando tipos algébricos de dados, imutabilidade, funções puras, currying, closures, pattern matching e list comprehensions.
 
-The `Test` workflow runs on:
-- Push to the `master` (or `main`) branch
-- Pull requests targeting the `master` (or `main`) branch
+---
 
-Both branch names are listed so the workflow works whether the default branch is `master` (as in this repository) or `main` (the default for new repositories created from this boilerplate).
+## Tecnologias Utilizadas
 
-### What the workflow does
+* **Linguagem:** Haskell (GHC)
+* **Framework Web:** IHP (Integrated Haskell Platform)
+* **Base de Dados:** PostgreSQL
+* **Gestão de Ambiente:** Nix / Devenv / Direnv
+* **Gestão de Dependências:** Cabal
 
-The `test` job runs on `ubuntu-latest` and performs the following steps:
-1. Checks out the code
-2. Frees up disk space for large Nix builds ([nothing-but-nix](https://github.com/wimpysworld/nothing-but-nix))
-3. Installs Nix using the [Determinate Nix installer](https://github.com/DeterminateSystems/nix-installer-action) with lazy trees enabled
-4. Configures the [`digitallyinduced` Cachix cache](https://app.cachix.org/cache/digitallyinduced) for faster builds (pull only — `skipPush: true`)
-5. Enables the [Magic Nix Cache](https://github.com/DeterminateSystems/magic-nix-cache-action)
-6. Runs `nix flake check --impure -L`, which builds the project and runs the test suite
+---
 
-## Running the checks locally
+##  Arquitetura do Domínio Funcional
 
-You can run the same checks that CI runs:
+O núcleo de regras de negócio do sistema foi implementado no módulo funcional puro (`Application.Domain`):
 
-```bash
-nix flake check --impure
-```
+* **Tipos Algébricos & Records:** Modelagem de entidades (`StudentRecord`, `StatusMatricula`, `SituacaoAcademica`) recorrendo a Sum Types e Product Types.
+* **Currying e Closures:** Cálculo de médias ponderadas recorrendo à aplicação parcial de pesos fixos.
+* **Pattern Matching & Monad Maybe:** Avaliação declarativa da situação do aluno tratando notas opcionais de exame final (`Maybe Double`).
+* **List Comprehensions:** Filtragem e transformação declarativa de coleções de dados académicos.
 
-## Deployment
+---
 
-This boilerplate does not include an automated deployment job. To deploy your project, follow the [IHP Deployment Guide](https://ihp.digitallyinduced.com/Guide/deployment.html#deploying-with-deploytonixos) to set up a NixOS server.
+## Configuração e Instalação
 
-## Support
+### Pré-requisitos
+* [Nix](https://nixos.org/) com suporte a *Flakes* ativado.
+* [Direnv](https://direnv.net/) (recomendado para carregamento automático do ambiente).
 
-For issues related to IHP or this project's setup, please refer to the [IHP documentation](https://ihp.digitallyinduced.com/Guide/) or seek help on the [IHP Forum](https://ihp.digitallyinduced.com/community/).
+## Equipe
 
-For project-specific issues, please open an issue in this repository.
+* João Pedro de Almeida Floriano - 2420377
+* Elias Sousa Campos - 2619080
+* Felipe Cavalcante - 2210374
+* Nicolly Feitosa Barroso - 2420363
+* Carlos Huan Celestino de Brito - 2320478
