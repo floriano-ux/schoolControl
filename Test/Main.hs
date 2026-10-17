@@ -21,8 +21,74 @@ main = do
     hSetEncoding stderr utf8
     hspec specs
 
+-- Dados de exemplo para os relatórios (Sprint 2), montados sem banco.
+cursoHaskell, cursoSQL :: Course
+cursoHaskell = newRecord @Course |> set #id "00000000-0000-0000-0000-0000000000c1" |> set #name "Haskell" |> set #workload 60
+cursoSQL     = newRecord @Course |> set #id "00000000-0000-0000-0000-0000000000c2" |> set #name "SQL" |> set #workload 40
+
+ana, bruno :: Student
+ana   = newRecord @Student |> set #id "00000000-0000-0000-0000-0000000000a1" |> set #name "Ana"
+bruno = newRecord @Student |> set #id "00000000-0000-0000-0000-0000000000b1" |> set #name "Bruno"
+
+matricula :: Id Enrollment -> Student -> Course -> EnrollmentStatus -> Enrollment
+matricula matriculaId student course status = newRecord @Enrollment
+    |> set #id matriculaId |> set #studentId student.id |> set #courseId course.id |> set #status status
+
+m1, m2, m3 :: Enrollment
+m1 = matricula "00000000-0000-0000-0000-0000000000e1" ana cursoHaskell Ativa
+m2 = matricula "00000000-0000-0000-0000-0000000000e2" bruno cursoHaskell Ativa
+m3 = matricula "00000000-0000-0000-0000-0000000000e3" bruno cursoSQL Trancada
+
+-- Ana tira 9 em tudo (NF 9); Bruno tira 6 em tudo (NF 6). Ninguém tem nota em SQL.
+notasExemplo :: [Grade]
+notasExemplo =
+    [ nota 9 9 (Just 9) |> set #enrollmentId m1.id
+    , nota 6 6 (Just 6) |> set #enrollmentId m2.id
+    ]
+
 specs :: Spec
 specs = do
+    describe "validarCargaHoraria (Sprint 2)" do
+        it "aceita carga horária positiva" do
+            validarCargaHoraria 60 `shouldBe` Right 60
+        it "rejeita zero ou valores negativos" do
+            validarCargaHoraria 0 `shouldBe` Left (CargaHorariaInvalida 0)
+            validarCargaHoraria (-5) `shouldBe` Left (CargaHorariaInvalida (-5))
+        it "gera a mensagem em português usada no formulário" do
+            map mensagemDeErro (lefts [validarCargaHoraria 0]) `shouldBe` ["A carga horária deve ser maior que zero"]
+            mensagemDeErro (NotaForaDoIntervalo "pe1" 11) `shouldBe` "A nota deve estar entre 0 e 10"
+
+    describe "relatórios (map, filter, fold, concatMap)" do
+        it "mediaPorCurso calcula a média das NFs e devolve Nothing para curso sem notas" do
+            mediaPorCurso [cursoHaskell, cursoSQL] [m1, m2, m3] notasExemplo
+                `shouldBe` [("Haskell", Just 7.5), ("SQL", Nothing)]
+        it "rankingDeAlunos ordena pela média, da maior para a menor" do
+            rankingDeAlunos [bruno, ana] [m1, m2, m3] notasExemplo
+                `shouldBe` [(1, "Ana", 9), (2, "Bruno", 6)]
+        it "alunosPorCurso ignora matrículas trancadas e ordena os nomes" do
+            alunosPorCurso [cursoHaskell, cursoSQL] [bruno, ana] [m1, m2, m3]
+                `shouldBe` [("Haskell", ["Ana", "Bruno"]), ("SQL", [])]
+        it "contarPorSituacao conta cada situação com foldl'" do
+            contarPorSituacao [("Ana", 9, Aprovado), ("Bruno", 6, Aprovado), ("Caio", 3, Reprovado)]
+                `shouldBe` [(Aprovado, 2), (AguardandoAV3, 0), (Reprovado, 1), (Trancado, 0)]
+        it "cargaHorariaTotal soma a carga de todos os cursos" do
+            cargaHorariaTotal [cursoHaskell, cursoSQL] `shouldBe` 100
+            cargaHorariaTotal [] `shouldBe` 0
+
+    describe "podeAcessar (papéis e permissões)" do
+        it "administrador pode tudo" do
+            and [ podeAcessar Admin op r | op <- [minBound .. maxBound], r <- [minBound .. maxBound] ] `shouldBe` True
+        it "só o administrador gerencia usuários" do
+            map (\papel -> podeAcessar papel Visualizar Usuarios) [Admin, Coordenador, Professor, Aluno]
+                `shouldBe` [True, False, False, False]
+        it "coordenador vê as notas, mas não as altera" do
+            (podeAcessar Coordenador Visualizar Notas, podeAcessar Coordenador Gerenciar Notas) `shouldBe` (True, False)
+        it "professor lança notas, mas não altera cursos" do
+            (podeAcessar Professor Gerenciar Notas, podeAcessar Professor Gerenciar Cursos) `shouldBe` (True, False)
+        it "aluno só visualiza cursos e relatórios" do
+            recursosVisiveis Aluno `shouldBe` [Cursos, Relatorios]
+            podeAcessar Aluno Gerenciar Cursos `shouldBe` False
+
     describe "mediaPonderada (currying e closures)" do
         it "compõe a AV com 70% PE + 30% AVf" do
             comporAV 8 6 `shouldBe` 7.4

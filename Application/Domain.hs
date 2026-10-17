@@ -19,18 +19,37 @@ module Application.Domain
     , classificarMedia
     , situacaoDaMatricula
     , validarNota
+    , validarCargaHoraria
     , validarStudent
     , validarCourse
     , validarGrade
+    , mensagemDeErro
     , boletim
     , nomesAprovados
     , matriculasAtivasPorCurso
     , mediaDaTurma
+      -- Relatórios (map, filter, fold, concatMap)
+    , mediaPorCurso
+    , rankingDeAlunos
+    , alunosPorCurso
+    , contarPorSituacao
+    , cargaHorariaTotal
+    , nomeDoAluno
+    , nomeDoCurso
+      -- Papéis e permissões
+    , Recurso (..)
+    , Operacao (..)
+    , podeAcessar
+    , recursosVisiveis
+    , nomeDoPapel
+    , nomeDaSituacao
+    , nomeDoStatus
     ) where
 
 import IHP.Prelude
 import Generated.Types
 import qualified Data.Text as Text
+import Data.Ord (Down (..))
 
 
 -- Pesos da composição de uma AV: Prova Escrita (PE) e Avaliação Formativa (AVf).
@@ -168,10 +187,16 @@ validarStudent student =
     [ CampoVazio "name" | Text.null (Text.strip student.name) ]
     <> [ EmailInvalido student.email | not (emailValido student.email) ]
 
+-- A carga horária de um curso precisa ser positiva.
+validarCargaHoraria :: Int -> Either ErroValidacao Int
+validarCargaHoraria horas
+    | horas > 0 = Right horas
+    | otherwise = Left (CargaHorariaInvalida horas)
+
 validarCourse :: Course -> [ErroValidacao]
 validarCourse course =
     [ CampoVazio "name" | Text.null (Text.strip course.name) ]
-    <> [ CargaHorariaInvalida course.workload | course.workload <= 0 ]
+    <> lefts [ validarCargaHoraria course.workload ]
 
 -- Valida todas as notas parciais de uma vez
 validarGrade :: Grade -> [ErroValidacao]
@@ -192,6 +217,14 @@ emailValido :: Text -> Bool
 emailValido email = case Text.splitOn "@" email of
     [usuario, dominio] -> not (Text.null usuario) && "." `Text.isInfixOf` dominio
     _                  -> False
+
+-- Mensagem amigável (em português) para mostrar no formulário.
+mensagemDeErro :: ErroValidacao -> Text
+mensagemDeErro erro = case erro of
+    CampoVazio _                -> "Este campo é obrigatório"
+    EmailInvalido _             -> "Informe um e-mail válido"
+    NotaForaDoIntervalo _ _     -> "A nota deve estar entre 0 e 10"
+    CargaHorariaInvalida _      -> "A carga horária deve ser maior que zero"
 
 
 -- Coleções: list comprehensions, pattern matching e recursão em cauda
@@ -224,3 +257,148 @@ mediaDaTurma = go 0 0
     go _ 0 [] = Nothing
     go !soma !qtd [] = Just (soma / fromIntegral qtd)
     go !soma !qtd (x:xs) = go (soma + x) (qtd + 1) xs
+
+
+-- ---------------------------------------------------------------------------
+-- Relatórios: funções de alta ordem (map, filter, foldr/foldl', concatMap)
+-- ---------------------------------------------------------------------------
+
+-- Notas lançadas para as matrículas de um curso.
+-- filter seleciona as matrículas do curso; concatMap junta as notas de cada uma.
+notasDoCurso :: [Enrollment] -> [Grade] -> Course -> [Grade]
+notasDoCurso enrollments grades course =
+    concatMap notasDaMatricula (filter (\e -> e.courseId == course.id) enrollments)
+  where
+    notasDaMatricula enrollment = filter (\g -> g.enrollmentId == enrollment.id) grades
+
+-- Média das notas finais (NF) de cada curso.
+-- map percorre os cursos; foldr acumula (soma, quantidade) numa única passada.
+mediaPorCurso :: [Course] -> [Enrollment] -> [Grade] -> [(Text, Maybe Double)]
+mediaPorCurso courses enrollments grades = map mediaDoCurso courses
+  where
+    mediaDoCurso course =
+        let (soma, qtd) = foldr somar (0, 0) (notasDoCurso enrollments grades course)
+        in (course.name, if qtd == 0 then Nothing else Just (arredondar (soma / fromIntegral qtd)))
+
+    somar :: Grade -> (Double, Int) -> (Double, Int)
+    somar grade (soma, qtd) = (soma + mediaFinal grade, qtd + 1)
+
+-- Ranking dos alunos pela média geral (média das NFs de todas as matrículas com nota).
+-- Alunos sem nenhuma nota ficam de fora (mapMaybe). Empates são ordenados pelo nome.
+rankingDeAlunos :: [Student] -> [Enrollment] -> [Grade] -> [(Int, Text, Double)]
+rankingDeAlunos students enrollments grades =
+    zipWith (\posicao (nome, media) -> (posicao, nome, media)) [1 ..]
+        (sortOn (\(nome, media) -> (Down media, nome)) (mapMaybe mediaDoAluno students))
+  where
+    mediaDoAluno student =
+        let matriculas = filter (\e -> e.studentId == student.id) enrollments
+            notas      = concatMap (\e -> filter (\g -> g.enrollmentId == e.id) grades) matriculas
+        in fmap (\media -> (student.name, arredondar media)) (mediaDaTurma (map mediaFinal notas))
+
+-- Alunos de cada curso (matrículas trancadas não entram), em ordem alfabética.
+-- concatMap transforma cada matrícula em zero ou um nome de aluno.
+alunosPorCurso :: [Course] -> [Student] -> [Enrollment] -> [(Text, [Text])]
+alunosPorCurso courses students enrollments =
+    map (\course -> (course.name, nomesNoCurso course)) courses
+  where
+    nomesNoCurso course =
+        sort (concatMap nomeDoAluno (filter (doCurso course) enrollments))
+
+    doCurso course enrollment = enrollment.courseId == course.id && enrollment.status /= Trancada
+
+    nomeDoAluno enrollment =
+        map (.name) (filter (\s -> s.id == enrollment.studentId) students)
+
+-- Quantos alunos estão em cada situação do boletim (foldl' estrito).
+contarPorSituacao :: [(Text, Double, Situacao)] -> [(Situacao, Int)]
+contarPorSituacao linhas =
+    map (\situacao -> (situacao, foldl' (contar situacao) 0 linhas))
+        [Aprovado, AguardandoAV3, Reprovado, Trancado]
+  where
+    contar situacao total (_, _, s)
+        | s == situacao = total + 1
+        | otherwise     = total
+
+-- Soma da carga horária de uma lista de cursos.
+cargaHorariaTotal :: [Course] -> Int
+cargaHorariaTotal = foldl' (\total course -> total + course.workload) 0
+
+-- "JOIN" em memória: nome do aluno/curso a partir do id (usado nas listagens).
+nomeDoAluno :: [Student] -> Id Student -> Text
+nomeDoAluno students studentId =
+    maybe "(aluno removido)" (.name) (find (\s -> s.id == studentId) students)
+
+nomeDoCurso :: [Course] -> Id Course -> Text
+nomeDoCurso courses courseId =
+    maybe "(curso removido)" (.name) (find (\c -> c.id == courseId) courses)
+
+
+-- ---------------------------------------------------------------------------
+-- Papéis e permissões
+-- O papel do usuário (UserRole) vem do ENUM user_role do Postgres.
+-- ---------------------------------------------------------------------------
+
+-- Áreas do sistema que podem ser protegidas.
+data Recurso
+    = Estudantes
+    | Cursos
+    | Matriculas
+    | Notas
+    | Relatorios
+    | Usuarios
+    deriving (Eq, Show, Enum, Bounded)
+
+-- Visualizar = listar/ver detalhes; Gerenciar = criar, editar e excluir.
+data Operacao
+    = Visualizar
+    | Gerenciar
+    deriving (Eq, Show, Enum, Bounded)
+
+-- Tabela de permissões (pattern matching sobre o papel):
+--
+--   Recurso      | Admin | Coordenador | Professor | Aluno
+--   -------------+-------+-------------+-----------+-------
+--   Estudantes   |   G   |      G      |     V     |   -
+--   Cursos       |   G   |      G      |     V     |   V
+--   Matrículas   |   G   |      G      |     V     |   -
+--   Notas        |   G   |      V      |     G     |   -
+--   Relatórios   |   V   |      V      |     V     |   V
+--   Usuários     |   G   |      -      |     -     |   -
+--
+-- (G = gerenciar, que inclui visualizar; V = só visualizar)
+podeAcessar :: UserRole -> Operacao -> Recurso -> Bool
+podeAcessar Admin _ _ = True
+podeAcessar Coordenador operacao recurso = case recurso of
+    Usuarios -> False
+    Notas    -> operacao == Visualizar
+    _        -> True
+podeAcessar Professor operacao recurso = case recurso of
+    Usuarios -> False
+    Notas    -> True
+    _        -> operacao == Visualizar
+podeAcessar Aluno operacao recurso =
+    operacao == Visualizar && recurso `elem` [Cursos, Relatorios]
+
+-- Recursos que aparecem no menu para um papel (aplicação parcial + filter).
+recursosVisiveis :: UserRole -> [Recurso]
+recursosVisiveis papel = filter (podeAcessar papel Visualizar) [minBound .. maxBound]
+
+nomeDoPapel :: UserRole -> Text
+nomeDoPapel papel = case papel of
+    Admin       -> "Administrador"
+    Coordenador -> "Coordenador"
+    Professor   -> "Professor"
+    Aluno       -> "Aluno"
+
+nomeDaSituacao :: Situacao -> Text
+nomeDaSituacao situacao = case situacao of
+    Aprovado      -> "Aprovado"
+    Reprovado     -> "Reprovado"
+    AguardandoAV3 -> "Aguardando AV3"
+    Trancado      -> "Trancado"
+
+nomeDoStatus :: EnrollmentStatus -> Text
+nomeDoStatus status = case status of
+    Ativa     -> "Ativa"
+    Trancada  -> "Trancada"
+    Concluida -> "Concluída"

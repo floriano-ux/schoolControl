@@ -4,39 +4,47 @@ import Web.View.Prelude
 data WelcomeView = WelcomeView
 
 instance View WelcomeView where
-    html WelcomeView = [hsx|
-         <div style="background-color: #657b83; padding: 2rem; color:hsla(196, 13%, 96%, 1); border-radius: 4px">
-              <div style="max-width: 800px; margin-left: auto; margin-right: auto">
-                  <h1 style="margin-bottom: 2rem; font-size: 2rem; font-weight: 300; border-bottom: 1px solid white; padding-bottom: 0.25rem; border-color: hsla(196, 13%, 60%, 1)">
-                      IHP
-                  </h1>
+    html WelcomeView = case currentUserOrNothing @User of
+        Nothing      -> visitante
+        Just usuario -> painel usuario
 
-                  <h2 style="margin-top: 0; margin-bottom: 0rem; font-weight: 900; font-size: 3rem">
-                      It's working!
-                  </h2>
-
-                  <p style="margin-top: 1rem; font-size: 1.75rem; font-weight: 600; color:hsla(196, 13%, 80%, 1)">
-                     Your new application is up and running.
-                  </p>
-
-                  <p>
-                      <a
-                          href="https://ihp.digitallyinduced.com/Slack"
-                          style="margin-top: 2rem; background-color: #268bd2; padding: 1rem; border-radius: 3px; color: hsla(205, 69%, 98%, 1); text-decoration: none; font-weight: bold; display: inline-block; box-shadow: 0 4px 6px hsla(205, 69%, 0%, 0.08); transition: box-shadow 0.2s; transition: transform 0.2s;"
-                          target="_blank"
-                      >Join our community on Slack!</a>
-                  </p>
-
-                  <a href="https://ihp.digitallyinduced.com/Guide/your-first-project.html" style="margin-top: 2rem; background-color: #268bd2; padding: 1rem; border-radius: 3px; color: hsla(205, 69%, 98%, 1); text-decoration: none; font-weight: bold; display: inline-block; box-shadow: 0 4px 6px hsla(205, 69%, 0%, 0.08);  transition: box-shadow 0.2s; transition: transform 0.2s;" target="_blank">
-                     Learn the Next Steps in the Documentation
-                  </a>
-              </div>
-         </div>
-
-         <div style="max-width: 800px; margin-left: auto; margin-right: auto; margin-top: 4rem">
-              <img src="/ihp-welcome-icon.svg" alt="/ihp-welcome-icon" style="width:100%;">
-              <p style="color: hsla(196, 13%, 50%, 1); margin-top: 4rem">
-                 You can modify this start page by making changes to "./Web/View/Static/Welcome.hs".
-              </p>
-         </div> 
+-- Página para quem ainda não entrou
+visitante :: Html
+visitante = [hsx|
+    <div class="p-5 mb-4 bg-light rounded-3">
+        <h1 class="display-6">SGA-Func</h1>
+        <p class="lead">Sistema de gestão acadêmica: alunos, cursos, matrículas e notas.</p>
+        <a href={NewSessionAction} class="btn btn-primary btn-lg">Entrar</a>
+    </div>
 |]
+
+-- Atalhos para as áreas que o papel do usuário pode ver
+painel :: User -> Html
+painel usuario = [hsx|
+    <h1 class="h3">Olá, {usuario.name}!</h1>
+    <p class="text-muted">Você entrou como <strong>{nomeDoPapel usuario.userRole}</strong>.</p>
+    <div class="row g-3">
+        {forEach (recursosVisiveis usuario.userRole) atalho}
+    </div>
+|]
+
+atalho :: Recurso -> Html
+atalho recurso = [hsx|
+    <div class="col-sm-6 col-lg-4">
+        <a href={destino} class="card text-decoration-none h-100">
+            <div class="card-body">
+                <h2 class="h5 card-title">{titulo}</h2>
+                <p class="card-text text-muted">{descricao}</p>
+            </div>
+        </a>
+    </div>
+|]
+    where
+        titulo, descricao, destino :: Text
+        (titulo, descricao, destino) = case recurso of
+            Estudantes -> ("Estudantes", "Cadastro de alunos", pathTo StudentsAction)
+            Cursos     -> ("Cursos", "Cursos e carga horária", pathTo CoursesAction)
+            Matriculas -> ("Matrículas", "Alunos matriculados em cada curso", pathTo EnrollmentsAction)
+            Notas      -> ("Notas", "Lançamento de PE/AVf e situação final", pathTo GradesAction)
+            Relatorios -> ("Relatórios", "Médias, ranking e alunos por curso", pathTo ReportsAction)
+            Usuarios   -> ("Usuários", "Contas de acesso e papéis", pathTo UsersAction)

@@ -6,15 +6,14 @@ data ShowView = ShowView { student :: Student }
 instance View ShowView where
     html ShowView { .. } = [hsx|
         {breadcrumb}
-        <h1>Show Student</h1>
+        <h1>{student.name}</h1>
         <dl>
-            <dt>Name</dt><dd>{student.name}</dd>
-            <dt>Email</dt><dd>{student.email}</dd>
+            <dt>Nome</dt><dd>{student.name}</dd>
+            <dt>E-mail</dt><dd>{student.email}</dd>
         </dl>
-
     |]
         where
             breadcrumb = renderBreadcrumb
-                            [ breadcrumbLink "Students" StudentsAction
-                            , breadcrumbText "Show Student"
+                            [ breadcrumbLink "Estudantes" StudentsAction
+                            , breadcrumbText "Detalhes do estudante"
                             ]

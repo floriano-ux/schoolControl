@@ -4,6 +4,7 @@ module Web.View.Prelude
 , module Generated.Types
 , module Web.Types
 , module Application.Helper.View
+, module Application.Domain
 ) where
 
 import IHP.ViewPrelude
@@ -12,3 +13,4 @@ import Generated.Types
 import Web.Types
 import Web.Routes ()
 import Application.Helper.View
+import Application.Domain

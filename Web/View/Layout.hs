@@ -6,11 +6,12 @@ import Generated.Types
 import Web.Types
 import Web.Routes
 import Application.Helper.View
+import Application.Domain
 
 defaultLayout :: Html -> Html
 defaultLayout inner = [hsx|
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
     <head>
         {metaTags}
 
@@ -29,18 +30,45 @@ defaultLayout inner = [hsx|
 </html>
 |]
 
+-- O menu mostra só as áreas que o papel do usuário logado pode visualizar.
 navbar :: Html
 navbar = [hsx|
     <nav class="navbar navbar-expand navbar-dark bg-dark">
         <div class="container">
             <a class="navbar-brand" href="/">SGA-Func</a>
-            <div class="navbar-nav">
-                <a class="nav-link" href={StudentsAction}>Estudantes</a>
-                <a class="nav-link" href={CoursesAction}>Cursos</a>
+            <div class="navbar-nav me-auto">
+                {forEach recursos linkDoMenu}
             </div>
+            {usuarioLogado}
         </div>
     </nav>
 |]
+    where
+        recursos = maybe [] (\usuario -> recursosVisiveis usuario.userRole) (currentUserOrNothing @User)
+
+        usuarioLogado = case currentUserOrNothing @User of
+            Just usuario -> [hsx|
+                <div class="navbar-nav align-items-center">
+                    <span class="navbar-text me-3">
+                        {usuario.name} <span class="badge bg-secondary">{nomeDoPapel usuario.userRole}</span>
+                    </span>
+                    <a class="nav-link js-delete js-delete-no-confirm" href={DeleteSessionAction}>Sair</a>
+                </div>
+            |]
+            Nothing -> [hsx|
+                <div class="navbar-nav">
+                    <a class="nav-link" href={NewSessionAction}>Entrar</a>
+                </div>
+            |]
+
+linkDoMenu :: Recurso -> Html
+linkDoMenu recurso = case recurso of
+    Estudantes -> [hsx|<a class="nav-link" href={StudentsAction}>Estudantes</a>|]
+    Cursos     -> [hsx|<a class="nav-link" href={CoursesAction}>Cursos</a>|]
+    Matriculas -> [hsx|<a class="nav-link" href={EnrollmentsAction}>Matrículas</a>|]
+    Notas      -> [hsx|<a class="nav-link" href={GradesAction}>Notas</a>|]
+    Relatorios -> [hsx|<a class="nav-link" href={ReportsAction}>Relatórios</a>|]
+    Usuarios   -> [hsx|<a class="nav-link" href={UsersAction}>Usuários</a>|]
 
 -- The 'assetPath' function used below appends a `?v=SOME_VERSION` to the static assets in production
 -- This is useful to avoid users having old CSS and JS files in their browser cache once a new version is deployed

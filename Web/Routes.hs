@@ -30,3 +30,39 @@ POST /UpdateCourse?courseId UpdateCourseAction
 DELETE /DeleteCourse?courseId DeleteCourseAction
 |]
 
+[routes|EnrollmentsController
+GET /Enrollments EnrollmentsAction
+GET /NewEnrollment NewEnrollmentAction
+POST /CreateEnrollment CreateEnrollmentAction
+GET /EditEnrollment?enrollmentId EditEnrollmentAction
+POST /UpdateEnrollment?enrollmentId UpdateEnrollmentAction
+DELETE /DeleteEnrollment?enrollmentId DeleteEnrollmentAction
+|]
+
+[routes|GradesController
+GET /Grades GradesAction
+GET /NewGrade NewGradeAction
+POST /CreateGrade CreateGradeAction
+GET /EditGrade?gradeId EditGradeAction
+POST /UpdateGrade?gradeId UpdateGradeAction
+DELETE /DeleteGrade?gradeId DeleteGradeAction
+|]
+
+[routes|ReportsController
+GET /Reports ReportsAction
+|]
+
+[routes|UsersController
+GET /Users UsersAction
+GET /NewUser NewUserAction
+POST /CreateUser CreateUserAction
+GET /EditUser?userId EditUserAction
+POST /UpdateUser?userId UpdateUserAction
+DELETE /DeleteUser?userId DeleteUserAction
+|]
+
+[routes|SessionsController
+GET /NewSession NewSessionAction
+POST /CreateSession CreateSessionAction
+DELETE /DeleteSession DeleteSessionAction
+|]
