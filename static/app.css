@@ -454,3 +454,30 @@ a.card:hover {
     background: rgba(255, 255, 255, .18) !important;
     color: #fff !important;
 }
+
+/* --------------------------------------------------------------------------
+   Telas de autenticação (login e cadastro)
+   -------------------------------------------------------------------------- */
+
+.sga-auth-head {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.sga-auth-mark {
+    display: inline-grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--sga-primary), #0fbfae);
+    color: #fff;
+    font-family: var(--sga-font-head);
+    font-weight: 700;
+    box-shadow: 0 6px 16px rgba(21, 183, 166, .35);
+    margin-bottom: .9rem;
+}
+
+.sga-auth-sub {
+    color: var(--sga-muted);
+}
