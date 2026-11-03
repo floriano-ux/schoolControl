@@ -174,3 +174,22 @@ specs = do
             mediaDaTurma [6, 8, 10] `shouldBe` Just 8
         it "turma vazia não tem média" do
             mediaDaTurma [] `shouldBe` Nothing
+
+    describe "validarCadastro (Either + acúmulo de erros)" do
+        let valido = DadosCadastro
+                { nomeCadastro = "Nicolly"
+                , emailCadastro = "nicolly@unifor.br"
+                , senhaCadastro = "boaSenha9"
+                , confirmacaoCadastro = "boaSenha9"
+                }
+        it "aceita um cadastro bem preenchido" do
+            validarCadastro valido `shouldBe` Right valido
+        it "acumula todos os erros de uma vez, na ordem das regras" do
+            validarCadastro (valido { nomeCadastro = "  ", emailCadastro = "x", confirmacaoCadastro = "outra" })
+                `shouldBe` Left [NomeObrigatorio, EmailInvalidoCadastro, SenhasNaoConferem]
+        it "reporta só a senha quando o resto está certo" do
+            validarCadastro (valido { confirmacaoCadastro = "diferente" })
+                `shouldBe` Left [SenhasNaoConferem]
+        it "gera as mensagens em português" do
+            map mensagemDoCadastro [NomeObrigatorio, EmailInvalidoCadastro, SenhasNaoConferem]
+                `shouldBe` ["Informe o seu nome", "Informe um e-mail válido", "A senha e a confirmação não conferem"]

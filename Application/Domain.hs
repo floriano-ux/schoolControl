@@ -44,6 +44,11 @@ module Application.Domain
     , nomeDoPapel
     , nomeDaSituacao
     , nomeDoStatus
+    , DadosCadastro (..)
+    , ErroCadastro (..)
+    , validarCadastro
+    , mensagemDoCadastro
+    , emailValido
     ) where
 
 import IHP.Prelude
@@ -402,3 +407,44 @@ nomeDoStatus status = case status of
     Ativa     -> "Ativa"
     Trancada  -> "Trancada"
     Concluida -> "Concluída"
+
+
+-- ---------------------------------------------------------------------------
+-- Cadastro de novos usuários — validação pura
+-- ---------------------------------------------------------------------------
+
+-- Dados brutos vindos do formulário de cadastro.
+data DadosCadastro = DadosCadastro
+    { nomeCadastro        :: Text
+    , emailCadastro       :: Text
+    , senhaCadastro       :: Text
+    , confirmacaoCadastro :: Text
+    } deriving (Eq, Show)
+
+data ErroCadastro
+    = NomeObrigatorio
+    | EmailInvalidoCadastro
+    | SenhasNaoConferem
+    deriving (Eq, Show)
+
+-- Devolve Right com os dados quando tudo passa, ou Left com a lista de erros.
+validarCadastro :: DadosCadastro -> Either [ErroCadastro] DadosCadastro
+validarCadastro dados = case errosAtivos of
+    []   -> Right dados
+    erros -> Left erros
+  where
+    -- Coleção de regras: (condição que indica erro, erro correspondente).
+    regras :: [(Bool, ErroCadastro)]
+    regras =
+        [ (Text.null (Text.strip dados.nomeCadastro),          NomeObrigatorio)
+        , (not (emailValido dados.emailCadastro),              EmailInvalidoCadastro)
+        , (dados.senhaCadastro /= dados.confirmacaoCadastro,   SenhasNaoConferem)
+        ]
+    -- filter + map (fmap de listas) sobre a coleção de regras.
+    errosAtivos = map snd (filter fst regras)
+
+mensagemDoCadastro :: ErroCadastro -> Text
+mensagemDoCadastro erro = case erro of
+    NomeObrigatorio       -> "Informe o seu nome"
+    EmailInvalidoCadastro -> "Informe um e-mail válido"
+    SenhasNaoConferem     -> "A senha e a confirmação não conferem"
