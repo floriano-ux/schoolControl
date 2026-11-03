@@ -28,14 +28,21 @@ instance Controller UsersController where
                 Left user -> render NewView { user = user |> set #passwordHash "" }
                 Right user -> do
                     config <- carregarAuthConfig
-                    hashed <- gerarHashSenha config user.passwordHash
-                    documento <- cifrarOpcional config (param @Text "document")
-                    user
-                        |> set #passwordHash hashed
-                        |> set #document documento
-                        |> createRecord
-                    setSuccessMessage "Usuário criado"
-                    redirectTo UsersAction
+                    resultado <- tentar "usuarios" do
+                        hashed <- gerarHashSenha config user.passwordHash
+                        documento <- cifrarOpcional config (param @Text "document")
+                        user
+                            |> set #passwordHash hashed
+                            |> set #document documento
+                            |> createRecord
+                    case resultado of
+                        Left mensagem -> do
+                            setErrorMessage mensagem
+                            render NewView { user = user |> set #passwordHash "" }
+                        Right _ -> do
+                            logAuthInfo ("usuário criado pelo admin: " <> user.email)
+                            setSuccessMessage "Usuário criado"
+                            redirectTo UsersAction
 
     action EditUserAction { userId } = do
         user <- fetch userId
@@ -58,19 +65,26 @@ instance Controller UsersController where
                 Left user -> render EditView { user = user |> set #passwordHash "", documento = "" }
                 Right user -> do
                     config <- carregarAuthConfig
-                    novoHash <- if Text.null user.passwordHash
-                        then pure hashAtual
-                        else gerarHashSenha config user.passwordHash
-                    let docParam = param @Text "document"
-                    documento <- if Text.null (Text.strip docParam)
-                        then pure docAtual
-                        else cifrarOpcional config docParam
-                    user
-                        |> set #passwordHash novoHash
-                        |> set #document documento
-                        |> updateRecord
-                    setSuccessMessage "Usuário atualizado"
-                    redirectTo UsersAction
+                    resultado <- tentar "usuarios" do
+                        novoHash <- if Text.null user.passwordHash
+                            then pure hashAtual
+                            else gerarHashSenha config user.passwordHash
+                        let docParam = param @Text "document"
+                        documento <- if Text.null (Text.strip docParam)
+                            then pure docAtual
+                            else cifrarOpcional config docParam
+                        user
+                            |> set #passwordHash novoHash
+                            |> set #document documento
+                            |> updateRecord
+                    case resultado of
+                        Left mensagem -> do
+                            setErrorMessage mensagem
+                            render EditView { user = user |> set #passwordHash "", documento = "" }
+                        Right _ -> do
+                            logAuthInfo ("usuário atualizado pelo admin: " <> user.email)
+                            setSuccessMessage "Usuário atualizado"
+                            redirectTo UsersAction
 
     action DeleteUserAction { userId } = do
         user <- fetch userId

@@ -2,6 +2,9 @@ module Application.Helper.Controller
     ( viaDominio
     , exigirPermissao
     , opcoesDeMatricula
+    , tentar
+    , logAuthInfo
+    , logAuthWarn
     ) where
 
 import IHP.ControllerPrelude
@@ -9,6 +12,9 @@ import Generated.Types
 import Web.Types
 import Web.Routes ()
 import Application.Domain
+import Control.Exception (try, SomeException, displayException)
+import qualified Data.Text.IO as Text.IO
+import System.IO (stderr)
 
 -- Here you can add functions which are available in all your controllers
 
@@ -33,6 +39,36 @@ exigirPermissao operacao recurso = case currentUserOrNothing @User of
         unless (podeAcessar usuario.userRole operacao recurso) do
             setErrorMessage "Você não tem permissão para acessar esta página."
             earlyReturn (redirectToPath "/")
+
+-- ---------------------------------------------------------------------------
+-- Tratamento de erros e logs dos fluxos de autenticação
+-- ---------------------------------------------------------------------------
+
+-- Executa uma computação de IO (tipicamente acesso ao banco) capturando falhas
+-- inesperadas — por exemplo, banco indisponível ou fora de sincronia com o
+-- schema. O detalhe técnico vai para o log do servidor (back) e devolve-se uma
+-- mensagem amigável em 'Left'. Como NÃO envolve render/redirect, o fluxo normal
+-- de resposta do IHP nunca é interceptado: o controller decide como responder.
+tentar :: Text -> IO a -> IO (Either Text a)
+tentar fluxo acao = do
+    resultado <- try acao
+    case resultado of
+        Right valor -> pure (Right valor)
+        Left (erro :: SomeException) -> do
+            escreverLog "ERROR" ("[" <> fluxo <> "] falha inesperada: " <> cs (displayException erro))
+            pure (Left "Estamos com um problema técnico no momento. Tente novamente em instantes.")
+
+-- Log informativo de um evento de autenticação (ex.: login bem-sucedido).
+logAuthInfo :: Text -> IO ()
+logAuthInfo mensagem = escreverLog "INFO" ("[auth] " <> mensagem)
+
+-- Log de alerta para tentativas malsucedidas (credenciais erradas, conta bloqueada).
+logAuthWarn :: Text -> IO ()
+logAuthWarn mensagem = escreverLog "WARN" ("[auth] " <> mensagem)
+
+-- Escreve uma linha no log do servidor (stderr), que o IHP exibe no terminal.
+escreverLog :: Text -> Text -> IO ()
+escreverLog nivel mensagem = Text.IO.hPutStrLn stderr ("[" <> nivel <> "] " <> mensagem)
 
 -- Opções do select de matrícula, em ordem alfabética: "Aluno — Curso (status)".
 opcoesDeMatricula :: [Student] -> [Course] -> [Enrollment] -> [OpcaoMatricula]
