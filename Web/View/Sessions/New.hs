@@ -10,6 +10,9 @@ instance View (NewView User) where
                     <div class="card-body p-4">
                         <h1 class="h4 mb-4 text-center">Entrar no SGA-Func</h1>
                         {renderForm user}
+                        <p class="text-center text-muted mt-3 mb-0">
+                            Não tem conta? <a href={NewRegistrationAction}>Criar conta</a>
+                        </p>
                     </div>
                 </div>
             </div>

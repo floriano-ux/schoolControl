@@ -6,6 +6,7 @@ module Application.Security
     , ErroSenha (..)
     , mensagemDaSenha
     , validarForcaSenha
+    , avaliarForcaSenha
     , tamanhoMinimoSenha
     , gerarHashSenha
     , conferirSenha
@@ -94,6 +95,10 @@ validarForcaSenha senha = do
         | not (Text.any isDigit senha)  -> Left SenhaSemNumero
         | not (Text.any isLetter senha) -> Left SenhaSemLetra
         | otherwise                     -> Right ()
+
+-- Executa o Reader com a config dada
+avaliarForcaSenha :: AuthConfig -> Text -> Either ErroSenha ()
+avaliarForcaSenha config senha = runReader (validarForcaSenha senha) config
 
 
 -- ---------------------------------------------------------------------------

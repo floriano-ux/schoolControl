@@ -66,3 +66,8 @@ GET /NewSession NewSessionAction
 POST /CreateSession CreateSessionAction
 DELETE /DeleteSession DeleteSessionAction
 |]
+
+[routes|RegistrationsController
+GET /Register NewRegistrationAction
+POST /CreateRegistration CreateRegistrationAction
+|]

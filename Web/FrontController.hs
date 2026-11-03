@@ -9,6 +9,7 @@ import Web.Controller.Courses
 import Web.Controller.Enrollments
 import Web.Controller.Grades
 import Web.Controller.Reports
+import Web.Controller.Registrations
 import Web.Controller.Sessions
 import Web.Controller.Students
 import Web.Controller.Static
@@ -18,6 +19,7 @@ instance FrontController WebApplication where
     controllers = 
         [ startPage WelcomeAction
         -- Generator Marker
+        , parseRoute @RegistrationsController
         , parseRoute @SessionsController
         , parseRoute @UsersController
         , parseRoute @ReportsController
