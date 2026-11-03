@@ -25,7 +25,7 @@ instance Controller SessionsController where
                         then do
                             setErrorMessage "Conta bloqueada por excesso de tentativas. Tente novamente em 1 hora."
                             redirectTo NewSessionAction
-                        else if verifyPassword user (param @Text "password")
+                        else if conferirSenha (param @Text "password") user.passwordHash
                             then do
                                 login user
                                 user

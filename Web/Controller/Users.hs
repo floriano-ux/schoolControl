@@ -27,7 +27,8 @@ instance Controller UsersController where
             >>= ifValid \case
                 Left user -> render NewView { user = user |> set #passwordHash "" }
                 Right user -> do
-                    hashed <- hashPassword user.passwordHash
+                    config <- carregarAuthConfig
+                    hashed <- gerarHashSenha config user.passwordHash
                     user
                         |> set #passwordHash hashed
                         |> createRecord
@@ -50,9 +51,10 @@ instance Controller UsersController where
             >>= ifValid \case
                 Left user -> render EditView { user = user |> set #passwordHash "" }
                 Right user -> do
+                    config <- carregarAuthConfig
                     novoHash <- if Text.null user.passwordHash
                         then pure hashAtual
-                        else hashPassword user.passwordHash
+                        else gerarHashSenha config user.passwordHash
                     user
                         |> set #passwordHash novoHash
                         |> updateRecord
