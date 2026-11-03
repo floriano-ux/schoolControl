@@ -8,21 +8,56 @@ instance View WelcomeView where
         Nothing      -> visitante
         Just usuario -> painel usuario
 
--- Página para quem ainda não entrou
+-- Página para quem ainda não entrou: hero com a proposta + vitrine de recursos.
 visitante :: Html
 visitante = [hsx|
-    <div class="p-5 mb-4 bg-light rounded-3">
-        <h1 class="display-6">SGA-Func</h1>
-        <p class="lead">Sistema de gestão acadêmica: alunos, cursos, matrículas e notas.</p>
-        <a href={NewSessionAction} class="btn btn-primary btn-lg">Entrar</a>
+    <section class="sga-hero">
+        <span class="sga-hero-eyebrow">Gestão acadêmica</span>
+        <h1 class="sga-hero-title">Alunos, cursos, matrículas e notas num só lugar</h1>
+        <p class="sga-hero-subtitle">
+            O SGA-Func centraliza o controle acadêmico — com cálculo de médias,
+            situação de cada aluno e relatórios — de um jeito simples e organizado.
+        </p>
+        <div class="sga-hero-actions">
+            <a href={NewSessionAction} class="btn btn-primary btn-lg">Entrar</a>
+            <a href={NewRegistrationAction} class="btn btn-outline-primary btn-lg">Criar conta</a>
+        </div>
+    </section>
+
+    <div class="row g-4 sga-features">
+        {forEach vitrine cartaoVitrine}
+    </div>
+|]
+    where
+        vitrine :: [(Text, Text, Text)]
+        vitrine =
+            [ ("🎓", "Estudantes", "Cadastro e acompanhamento dos alunos")
+            , ("📚", "Cursos", "Cursos com carga horária")
+            , ("🧾", "Matrículas", "Vínculo de alunos aos cursos")
+            , ("📝", "Notas", "Lançamento de PE/AVf e situação final")
+            , ("📊", "Relatórios", "Médias, ranking e alunos por curso")
+            ]
+
+cartaoVitrine :: (Text, Text, Text) -> Html
+cartaoVitrine (icone, titulo, descricao) = [hsx|
+    <div class="col-sm-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <span class="sga-feature-icon">{icone}</span>
+                <h2 class="h5 card-title">{titulo}</h2>
+                <p class="card-text text-muted mb-0">{descricao}</p>
+            </div>
+        </div>
     </div>
 |]
 
--- Atalhos para as áreas que o papel do usuário pode ver
+-- Painel de quem está logado: saudação + atalhos para as áreas visíveis ao papel.
 painel :: User -> Html
 painel usuario = [hsx|
-    <h1 class="h3">Olá, {usuario.name}!</h1>
-    <p class="text-muted">Você entrou como <strong>{nomeDoPapel usuario.userRole}</strong>.</p>
+    <div class="sga-greeting">
+        <h1 class="h3">Olá, {usuario.name}! 👋</h1>
+        <p>Você entrou como <span class="badge bg-secondary">{nomeDoPapel usuario.userRole}</span></p>
+    </div>
     <div class="row g-3">
         {forEach (recursosVisiveis usuario.userRole) atalho}
     </div>
@@ -33,18 +68,20 @@ atalho recurso = [hsx|
     <div class="col-sm-6 col-lg-4">
         <a href={destino} class="card text-decoration-none h-100">
             <div class="card-body">
+                <span class="sga-card-icon">{icone}</span>
                 <h2 class="h5 card-title">{titulo}</h2>
-                <p class="card-text text-muted">{descricao}</p>
+                <p class="card-text text-muted mb-0">{descricao}</p>
             </div>
         </a>
     </div>
 |]
     where
-        titulo, descricao, destino :: Text
-        (titulo, descricao, destino) = case recurso of
-            Estudantes -> ("Estudantes", "Cadastro de alunos", pathTo StudentsAction)
-            Cursos     -> ("Cursos", "Cursos e carga horária", pathTo CoursesAction)
-            Matriculas -> ("Matrículas", "Alunos matriculados em cada curso", pathTo EnrollmentsAction)
-            Notas      -> ("Notas", "Lançamento de PE/AVf e situação final", pathTo GradesAction)
-            Relatorios -> ("Relatórios", "Médias, ranking e alunos por curso", pathTo ReportsAction)
-            Usuarios   -> ("Usuários", "Contas de acesso e papéis", pathTo UsersAction)
+        icone, titulo, descricao :: Text
+        destino :: Text
+        (icone, titulo, descricao, destino) = case recurso of
+            Estudantes -> ("🎓", "Estudantes", "Cadastro de alunos", pathTo StudentsAction)
+            Cursos     -> ("📚", "Cursos", "Cursos e carga horária", pathTo CoursesAction)
+            Matriculas -> ("🧾", "Matrículas", "Alunos matriculados em cada curso", pathTo EnrollmentsAction)
+            Notas      -> ("📝", "Notas", "Lançamento de PE/AVf e situação final", pathTo GradesAction)
+            Relatorios -> ("📊", "Relatórios", "Médias, ranking e alunos por curso", pathTo ReportsAction)
+            Usuarios   -> ("👥", "Usuários", "Contas de acesso e papéis", pathTo UsersAction)
