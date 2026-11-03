@@ -44,6 +44,7 @@ CREATE TABLE users (
     email TEXT NOT NULL,
     password_hash TEXT NOT NULL,
     user_role user_role DEFAULT 'aluno' NOT NULL,
+    document TEXT DEFAULT NULL,
     locked_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
     failed_login_attempts INT DEFAULT 0 NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL

@@ -174,3 +174,46 @@ specs = do
             mediaDaTurma [6, 8, 10] `shouldBe` Just 8
         it "turma vazia não tem média" do
             mediaDaTurma [] `shouldBe` Nothing
+
+    describe "validarCadastro (Either + acúmulo de erros)" do
+        let valido = DadosCadastro
+                { nomeCadastro = "Nicolly"
+                , emailCadastro = "nicolly@unifor.br"
+                , senhaCadastro = "boaSenha9"
+                , confirmacaoCadastro = "boaSenha9"
+                }
+        it "aceita um cadastro bem preenchido" do
+            validarCadastro valido `shouldBe` Right valido
+        it "acumula todos os erros de uma vez, na ordem das regras" do
+            validarCadastro (valido { nomeCadastro = "  ", emailCadastro = "x", confirmacaoCadastro = "outra" })
+                `shouldBe` Left [NomeObrigatorio, EmailInvalidoCadastro, SenhasNaoConferem]
+        it "reporta só a senha quando o resto está certo" do
+            validarCadastro (valido { confirmacaoCadastro = "diferente" })
+                `shouldBe` Left [SenhasNaoConferem]
+        it "gera as mensagens em português" do
+            map mensagemDoCadastro [NomeObrigatorio, EmailInvalidoCadastro, SenhasNaoConferem]
+                `shouldBe` ["Informe o seu nome", "Informe um e-mail válido", "A senha e a confirmação não conferem"]
+
+    describe "pipelineCadastroCPS (Continuation Passing Style)" do
+        let dados = DadosCadastro "Nicolly" "nicolly@unifor.br" "boaSenha9" "boaSenha9"
+            -- continuações simples que marcam qual caminho foi seguido
+            executa d forca email = pipelineCadastroCPS d forca email ("erro: " <>) (const "ok")
+        it "segue para o sucesso quando tudo passa" do
+            executa dados (Right ()) Nothing `shouldBe` "ok"
+        it "aborta no primeiro erro de campo via continuação de erro" do
+            executa (dados { nomeCadastro = "" }) (Right ()) Nothing `shouldBe` "erro: Informe o seu nome"
+        it "aborta pela força da senha antes de olhar o e-mail" do
+            executa dados (Left "senha fraca") (Just "em uso") `shouldBe` "erro: senha fraca"
+        it "aborta quando o e-mail já está em uso" do
+            executa dados (Right ()) (Just "Este e-mail já está em uso. Que tal nicolly1@unifor.br?")
+                `shouldBe` "erro: Este e-mail já está em uso. Que tal nicolly1@unifor.br?"
+
+    describe "avaliação preguiçosa (variacoesDeEmail / primeiroEmailLivre)" do
+        it "gera variações sufixadas do e-mail" do
+            take 3 (variacoesDeEmail "ana@unifor.br")
+                `shouldBe` ["ana@unifor.br", "ana1@unifor.br", "ana2@unifor.br"]
+        it "acha a primeira variação livre percorrendo uma lista infinita" do
+            primeiroEmailLivre ["ana@unifor.br", "ana1@unifor.br"] "ana@unifor.br"
+                `shouldBe` "ana2@unifor.br"
+        it "devolve o próprio e-mail quando ele já está livre" do
+            primeiroEmailLivre ["outro@unifor.br"] "ana@unifor.br" `shouldBe` "ana@unifor.br"

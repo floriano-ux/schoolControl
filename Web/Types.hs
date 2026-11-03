@@ -67,6 +67,12 @@ data SessionsController
     | DeleteSessionAction
     deriving (Eq, Show, Data)
 
+-- Cadastro público: qualquer visitante pode criar a própria conta (papel aluno).
+data RegistrationsController
+    = NewRegistrationAction
+    | CreateRegistrationAction
+    deriving (Eq, Show, Data)
+
 
 -- Item do select de matrículas na tela de Notas ("Aluno — Curso (status)").
 data OpcaoMatricula = OpcaoMatricula

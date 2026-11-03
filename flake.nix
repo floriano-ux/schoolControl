@@ -32,6 +32,9 @@
                         base
                         wai
                         text
+                        mtl       # Reader para configuração (Application.Security)
+                        crypton   # bcrypt + AES-256-GCM
+                        memory    # ByteArray / codificação Base64
                         # ihp-mail           # Email support: https://ihp.digitallyinduced.com/Guide/mail.html
                         # ihp-datasync       # Real-time DataSync
                         # ihp-job-dashboard  # Job dashboard UI

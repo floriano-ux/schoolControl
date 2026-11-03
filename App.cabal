@@ -29,6 +29,9 @@ executable App
   	base,
   	wai,
     text,
+    mtl,
+    crypton,
+    memory,
     hspec,
     ihp-hspec
   hs-source-dirs:      .

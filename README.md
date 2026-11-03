@@ -45,6 +45,47 @@ modelos que o IHP gera a partir de `Application/Schema.sql`: `Student`, `Course`
   `matriculasAtivasPorCurso`.
 * **Recursão em cauda:** `mediaDaTurma`.
 
+---
+
+## Autenticação e Cadastro
+
+O sistema tem login por e-mail/senha, bloqueio de conta após tentativas erradas (IHP `Lockable`),
+papéis com permissões (`admin`, `coordenador`, `professor`, `aluno`) e **cadastro público** de novos
+usuários (`/Register`), que entram com o papel `aluno`.
+
+A criptografia e a configuração ficam isoladas no módulo `Application.Security`:
+
+* **Hash de senhas com bcrypt:** `gerarHashSenha` (o efeito/aleatoriedade fica contido no `IO`) e
+  `conferirSenha` (pura). Usados no login (`Sessions`) e no cadastro (`Users`, `Registrations`).
+* **Criptografia de campos sensíveis (AES-256-GCM):** o CPF (`users.document`) é guardado cifrado por
+  `cifrarCampo`/`cifrarOpcional` e só é decifrado (`decifrarCampo`/`decifrarOpcional`) para exibição ao
+  administrador. O modo GCM é autenticado: dados adulterados são rejeitados (`Nothing`).
+
+### Conceitos funcionais aplicados na autenticação
+
+* **Monad `Reader` (configuração):** `AuthConfig` é lida do ambiente uma única vez no limite de `IO`
+  (`carregarAuthConfig`) e consumida por funções puras via `Reader` (`validarForcaSenha`,
+  `tamanhoMinimoSenha`).
+* **`IO` isolado:** só `carregarAuthConfig`, `gerarHashSenha` e `cifrarCampo` vivem em `IO`; o resto é puro.
+* **`Maybe`/`Either` para validação:** `decifrarCampo` devolve `Maybe`; `validarForcaSenha` devolve
+  `Either ErroSenha ()`; `validarCadastro` devolve `Either [ErroCadastro]` acumulando **todos** os erros.
+* **Functor em coleções:** `validarCadastro` percorre a coleção de regras com `filter`/`map`.
+* **Continuation Passing Style (CPS):** `pipelineCadastroCPS` encadeia as etapas do cadastro passando
+  continuações explícitas de erro e de sucesso, em vez de devolver um `Either` intermediário.
+* **Lazy evaluation:** `variacoesDeEmail` é uma lista **infinita** de alternativas de e-mail; graças à
+  avaliação preguiçosa, `primeiroEmailLivre` consome apenas até achar a primeira variação disponível
+  (usada para sugerir um e-mail quando o informado já existe).
+
+### Usuários de teste (fixtures)
+
+Senha de todos: `senha123` (apenas para desenvolvimento). E-mails:
+`admin@`, `coordenador@`, `professor@`, `aluno@` `schoolcontrol.dev`.
+
+### Configuração por ambiente
+
+* `AUTH_BCRYPT_COST` — custo do bcrypt (padrão `10`).
+* `AUTH_ENCRYPTION_KEY` — chave da criptografia AES (ajustada para 32 bytes). **Troque em produção.**
+
 ## Equipe
 
 * João Pedro de Almeida Floriano - 2420377
