@@ -311,6 +311,20 @@ a.card:hover {
     color: var(--sga-primary-hover) !important;
 }
 
+.badge.bg-primary {
+    background: var(--sga-navy) !important;
+}
+
+/* Cabeçalho de página (título + ação) */
+.sga-page-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.25rem;
+}
+
 /* --------------------------------------------------------------------------
    Alertas / mensagens flash
    -------------------------------------------------------------------------- */
