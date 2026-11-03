@@ -21,6 +21,10 @@ renderForm user = formFor user [hsx|
     {(emailField #email) { fieldLabel = "E-mail" }}
     {(selectField #userRole papeis) { fieldLabel = "Papel" }}
     {(passwordField #passwordHash) { fieldLabel = "Senha", helpText = "Mínimo de 6 caracteres" }}
+    <div class="form-group mb-3">
+        <label class="form-label" for="document">CPF</label>
+        <input id="document" name="document" type="text" class="form-control" placeholder="Opcional — guardado cifrado" />
+    </div>
     {submitButton { label = "Criar usuário" }}
 |]
     where

@@ -29,34 +29,45 @@ instance Controller UsersController where
                 Right user -> do
                     config <- carregarAuthConfig
                     hashed <- gerarHashSenha config user.passwordHash
+                    documento <- cifrarOpcional config (param @Text "document")
                     user
                         |> set #passwordHash hashed
+                        |> set #document documento
                         |> createRecord
                     setSuccessMessage "Usuário criado"
                     redirectTo UsersAction
 
     action EditUserAction { userId } = do
         user <- fetch userId
-        -- Nunca manda o hash da senha para o navegador
-        render EditView { user = user |> set #passwordHash "" }
+        config <- carregarAuthConfig
+        -- Nunca manda o hash da senha para o navegador; o CPF vai decifrado para o form.
+        render EditView
+            { user = user |> set #passwordHash ""
+            , documento = fromMaybe "" (decifrarOpcional config user.document)
+            }
 
     action UpdateUserAction { userId } = do
         user <- fetch userId
         let hashAtual = user.passwordHash
+        let docAtual  = user.document
         user
             |> buildUser
-            -- Na edição a senha é opcional: em branco mantém a atual
             |> validateField #passwordHash senhaOpcional
             |> validarEmailDeUsuarioUnico
             >>= ifValid \case
-                Left user -> render EditView { user = user |> set #passwordHash "" }
+                Left user -> render EditView { user = user |> set #passwordHash "", documento = "" }
                 Right user -> do
                     config <- carregarAuthConfig
                     novoHash <- if Text.null user.passwordHash
                         then pure hashAtual
                         else gerarHashSenha config user.passwordHash
+                    let docParam = param @Text "document"
+                    documento <- if Text.null (Text.strip docParam)
+                        then pure docAtual
+                        else cifrarOpcional config docParam
                     user
                         |> set #passwordHash novoHash
+                        |> set #document documento
                         |> updateRecord
                     setSuccessMessage "Usuário atualizado"
                     redirectTo UsersAction

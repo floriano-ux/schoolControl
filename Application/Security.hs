@@ -12,6 +12,8 @@ module Application.Security
     , conferirSenha
     , cifrarCampo
     , decifrarCampo
+    , cifrarOpcional
+    , decifrarOpcional
     ) where
 
 import IHP.Prelude
@@ -145,3 +147,13 @@ decifrarCampo config blob = do
     aead   <- maybeCryptoError (aeadInit AEAD_GCM cipher nonce)
     plano  <- aeadSimpleDecrypt aead BS.empty ct (AuthTag (BA.convert tag))
     pure (TE.decodeUtf8 plano)
+
+-- Campo opcional: texto em branco não é cifrado (vira Nothing); caso contrário, cifra.
+cifrarOpcional :: AuthConfig -> Text -> IO (Maybe Text)
+cifrarOpcional config texto
+    | Text.null (Text.strip texto) = pure Nothing
+    | otherwise                    = Just <$> cifrarCampo config texto
+
+-- Decifra um campo opcional já armazenado (Nothing permanece Nothing).
+decifrarOpcional :: AuthConfig -> Maybe Text -> Maybe Text
+decifrarOpcional config = (>>= decifrarCampo config)
