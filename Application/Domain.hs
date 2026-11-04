@@ -36,6 +36,18 @@ module Application.Domain
     , cargaHorariaTotal
     , nomeDoAluno
     , nomeDoCurso
+      -- Filtros e KPIs (HOF, Functors, Either/Maybe)
+    , FiltroRelatorio (..)
+    , filtroVazio
+    , filtrarPorCurso
+    , filtrarPorStatus
+    , filtrarCursos
+    , aplicarFiltro
+    , parseStatus
+    , totalAlunosFiltrados
+    , totalMatriculasAtivas
+    , taxaAprovacao
+    , percentualAprovados
       -- Papéis e permissões
     , Recurso (..)
     , Operacao (..)
@@ -58,6 +70,7 @@ import IHP.Prelude
 import Generated.Types
 import qualified Data.Text as Text
 import Data.Ord (Down (..))
+import Data.List (nub)
 
 
 -- Pesos da composição de uma AV: Prova Escrita (PE) e Avaliação Formativa (AVf).
@@ -339,6 +352,76 @@ nomeDoAluno students studentId =
 nomeDoCurso :: [Course] -> Id Course -> Text
 nomeDoCurso courses courseId =
     maybe "(curso removido)" (.name) (find (\c -> c.id == courseId) courses)
+
+
+-- ---------------------------------------------------------------------------
+-- Filtros do Dashboard e KPIs (HOF, Functors, Either/Maybe)
+-- ---------------------------------------------------------------------------
+
+-- Critérios de filtro para o relatório / dashboard.
+-- Campos opcionais (Maybe): Nothing indica ausência de restrição naquele campo.
+data FiltroRelatorio = FiltroRelatorio
+    { cursoId :: Maybe (Id Course)
+    , status  :: Maybe EnrollmentStatus
+    } deriving (Eq, Show)
+
+filtroVazio :: FiltroRelatorio
+filtroVazio = FiltroRelatorio Nothing Nothing
+
+-- Filtra uma coleção de matrículas pelo curso.
+-- Quando Nothing, devolve a lista original sem alterações (id).
+filtrarPorCurso :: Maybe (Id Course) -> [Enrollment] -> [Enrollment]
+filtrarPorCurso Nothing          enrollments = enrollments
+filtrarPorCurso (Just targetId)  enrollments = filter (\e -> e.courseId == targetId) enrollments
+
+-- Filtra uma coleção de matrículas pelo status da matrícula.
+-- Quando Nothing, devolve a lista original sem alterações (id).
+filtrarPorStatus :: Maybe EnrollmentStatus -> [Enrollment] -> [Enrollment]
+filtrarPorStatus Nothing          enrollments = enrollments
+filtrarPorStatus (Just targetSt)  enrollments = filter (\e -> e.status == targetSt) enrollments
+
+-- Aplica o FiltroRelatorio sobre a lista de matrículas (composição de HOFs).
+aplicarFiltro :: FiltroRelatorio -> [Enrollment] -> [Enrollment]
+aplicarFiltro FiltroRelatorio { cursoId, status } =
+    filtrarPorStatus status . filtrarPorCurso cursoId
+
+-- Filtra cursos se houver restrição por curso no filtro.
+-- Se Nothing, mantém todos os cursos.
+filtrarCursos :: Maybe (Id Course) -> [Course] -> [Course]
+filtrarCursos Nothing          courses = courses
+filtrarCursos (Just targetId)  courses = filter (\c -> c.id == targetId) courses
+
+-- Converte texto em EnrollmentStatus de forma pura e case-insensitive (Maybe).
+parseStatus :: Text -> Maybe EnrollmentStatus
+parseStatus txt = case Text.toLower (Text.strip txt) of
+    "ativa"     -> Just Ativa
+    "trancada"  -> Just Trancada
+    "concluida" -> Just Concluida
+    "concluída" -> Just Concluida
+    _           -> Nothing
+
+-- Total de alunos considerados no relatório.
+-- Se houver filtro ativo (curso ou status), conta os alunos distintos presentes
+-- nas matrículas filtradas; se não houver filtro, devolve o total geral de alunos.
+totalAlunosFiltrados :: FiltroRelatorio -> [Student] -> [Enrollment] -> Int
+totalAlunosFiltrados FiltroRelatorio { cursoId = Nothing, status = Nothing } students _ = length students
+totalAlunosFiltrados _ _ enrollments = length (nub (map (.studentId) enrollments))
+
+-- Conta quantas matrículas ativas existem na lista fornecida.
+totalMatriculasAtivas :: [Enrollment] -> Int
+totalMatriculasAtivas enrollments = length (filter (\e -> e.status == Ativa) enrollments)
+
+-- Percentual de aprovação sobre as linhas do boletim (0% a 100%).
+-- Devolve Nothing se não houver nenhuma nota lançada (evita divisão por zero).
+taxaAprovacao :: [(Text, Double, Situacao)] -> Maybe Double
+taxaAprovacao []     = Nothing
+taxaAprovacao linhas =
+    let aprovados = length (nomesAprovados linhas)
+        total     = length linhas
+    in Just (arredondar (fromIntegral aprovados / fromIntegral total * 100))
+
+percentualAprovados :: [(Text, Double, Situacao)] -> Maybe Double
+percentualAprovados = taxaAprovacao
 
 
 -- ---------------------------------------------------------------------------

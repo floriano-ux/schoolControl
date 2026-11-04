@@ -2,22 +2,105 @@ module Web.View.Reports.Index where
 import Web.View.Prelude
 
 data IndexView = IndexView
-    { medias     :: [(Text, Maybe Double)]
-    , ranking    :: [(Int, Text, Double)]
-    , alunos     :: [(Text, [Text])]
-    , ativas     :: [(Text, Int)]
-    , situacoes  :: [(Situacao, Int)]
-    , cargaTotal :: Int
+    { medias           :: [(Text, Maybe Double)]
+    , ranking          :: [(Int, Text, Double)]
+    , alunos           :: [(Text, [Text])]
+    , ativas           :: [(Text, Int)]
+    , situacoes        :: [(Situacao, Int)]
+    , cargaTotal       :: Int
+    , courses          :: [Course]
+    , filtro           :: FiltroRelatorio
+    , totalAlunos      :: Int
+    , matriculasAtivas :: Int
+    , taxaAprov        :: Maybe Double
     }
 
 instance View IndexView where
     html IndexView { .. } = [hsx|
         {breadcrumb}
-        <h1>Relatórios</h1>
-        <p class="text-muted">
-            Calculados no módulo puro <code>Application.Domain</code> com map, filter, foldr/foldl' e concatMap.
-        </p>
+        <div class="sga-page-head">
+            <div>
+                <h1 class="h2 mb-1">Dashboard</h1>
+                <p class="text-muted mb-0">
+                    Acompanhamento acadêmico com médias, ranking e filtros dinâmicos calculados puramente em Haskell.
+                </p>
+            </div>
+            <div class="sga-page-actions">
+                <span class="badge badge-live" title="Atualização automática em tempo real via IHP AutoRefresh">
+                    Tempo real
+                </span>
+            </div>
+        </div>
 
+        <!-- Faixa de KPIs -->
+        <div class="row g-3 mb-4">
+            <div class="col-sm-6 col-lg-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="text-muted small text-uppercase fw-semibold">Total de Alunos</div>
+                        <div class="fs-2 fw-bold text-dark mt-1">{totalAlunos}</div>
+                        <div class="text-muted small mt-1">{subtextoAlunos}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="text-muted small text-uppercase fw-semibold">Matrículas Ativas</div>
+                        <div class="fs-2 fw-bold text-success mt-1">{matriculasAtivas}</div>
+                        <div class="text-muted small mt-1">em andamento regular</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="text-muted small text-uppercase fw-semibold">Carga Total</div>
+                        <div class="fs-2 fw-bold text-dark mt-1">{cargaTotal} h</div>
+                        <div class="text-muted small mt-1">cursos considerados</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="text-muted small text-uppercase fw-semibold">% Aprovados</div>
+                        <div class="fs-2 fw-bold text-primary mt-1">{formatarTaxa taxaAprov}</div>
+                        <div class="text-muted small mt-1">com notas lançadas</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulário de Filtro (GET) -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="GET" action={ReportsAction} class="row g-3 align-items-end">
+                    <div class="col-md-5">
+                        <label class="form-label" for="filtroCurso">Curso</label>
+                        <select id="filtroCurso" name="courseId" class="form-select">
+                            {renderTodosCursos}
+                            {forEach courses renderOpcaoCurso}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="filtroStatus">Status da matrícula</label>
+                        <select id="filtroStatus" name="status" class="form-select">
+                            {renderTodosStatus}
+                            {forEach statuses renderOpcaoStatus}
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary flex-fill">
+                            Filtrar
+                        </button>
+                        {when filtroAtivo linkLimpar}
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Cards de agregação -->
         <div class="row g-4">
             <div class="col-lg-6">
                 <div class="card h-100">
@@ -54,7 +137,40 @@ instance View IndexView where
         </div>
     |]
         where
-            breadcrumb = renderBreadcrumb [ breadcrumbLink "Relatórios" ReportsAction ]
+            breadcrumb = renderBreadcrumb [ breadcrumbLink "Dashboard" ReportsAction ]
+
+            subtextoAlunos :: Text
+            subtextoAlunos
+                | filtroAtivo = "no recorte filtrado"
+                | otherwise   = "cadastrados no sistema"
+
+            formatarTaxa :: Maybe Double -> Text
+            formatarTaxa Nothing  = "—"
+            formatarTaxa (Just p) = formatarNota p <> "%"
+
+            renderTodosCursos =
+                if isNothing filtro.cursoId
+                    then [hsx|<option value="" selected="selected">Todos os cursos</option>|]
+                    else [hsx|<option value="">Todos os cursos</option>|]
+
+            renderOpcaoCurso course =
+                if filtro.cursoId == Just course.id
+                    then [hsx|<option value={tshow course.id} selected="selected">{course.name}</option>|]
+                    else [hsx|<option value={tshow course.id}>{course.name}</option>|]
+
+            renderTodosStatus =
+                if isNothing filtro.status
+                    then [hsx|<option value="" selected="selected">Todos os status</option>|]
+                    else [hsx|<option value="">Todos os status</option>|]
+
+            renderOpcaoStatus st =
+                if filtro.status == Just st
+                    then [hsx|<option value={inputValue st} selected="selected">{nomeDoStatus st}</option>|]
+                    else [hsx|<option value={inputValue st}>{nomeDoStatus st}</option>|]
+
+            statuses = [minBound .. maxBound] :: [EnrollmentStatus]
+            filtroAtivo = isJust filtro.cursoId || isJust filtro.status
+            linkLimpar = [hsx|<a href={ReportsAction} class="btn btn-outline-secondary">Limpar</a>|]
 
 renderMedia :: (Text, Maybe Double) -> Html
 renderMedia (curso, media) = [hsx|

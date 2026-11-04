@@ -86,6 +86,20 @@ Senha de todos: `senha123` (apenas para desenvolvimento). E-mails:
 * `AUTH_BCRYPT_COST` — custo do bcrypt (padrão `10`).
 * `AUTH_ENCRYPTION_KEY` — chave da criptografia AES (ajustada para 32 bytes). **Troque em produção.**
 
+---
+
+## Dashboard e Reatividade em Tempo Real (IHP AutoRefresh)
+
+O sistema possui um dashboard analítico (`/Reports`) com KPIs acadêmicos (total de alunos, matrículas ativas, carga horária total e percentual de aprovação) e agregações calculadas puramente em Haskell no módulo `Application.Domain`.
+
+### Reatividade sem Miso (IHP AutoRefresh)
+
+Para proporcionar reatividade em tempo real sem a necessidade de reescrever o frontend em Miso/Obelisk ou introduzir frameworks pesados de JavaScript:
+
+* **`autoRefresh` no Controller:** Em `Web/Controller/Reports.hs`, a action `ReportsAction` invoca `autoRefresh`. O framework IHP rastreia automaticamente as tabelas consultadas (`Student`, `Course`, `Enrollment`, `Grade`) via PostgreSQL `LISTEN/NOTIFY`.
+* **WebSocket e Diff de DOM:** Quando ocorrem mutações no banco de dados (por exemplo, lançamento de notas, criação ou trancamento de matrículas), o servidor IHP reexecuta a action, recomputa as métricas no domínio funcional e despacha o diff HTML via WebSocket.
+* **Atualização transparente no navegador:** O `ihp-auto-refresh.js` integrado com `morphdom` aplica a atualização cirurgicamente nos nós alterados do DOM sem recarregar a página e sem necessidade de código JavaScript manual.
+
 ## Equipe
 
 * João Pedro de Almeida Floriano - 2420377
