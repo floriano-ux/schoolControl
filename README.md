@@ -70,8 +70,9 @@ A criptografia e a configuração ficam isoladas no módulo `Application.Securit
 * **`Maybe`/`Either` para validação:** `decifrarCampo` devolve `Maybe`; `validarForcaSenha` devolve
   `Either ErroSenha ()`; `validarCadastro` devolve `Either [ErroCadastro]` acumulando **todos** os erros.
 * **Functor em coleções:** `validarCadastro` percorre a coleção de regras com `filter`/`map`.
-* **Continuation Passing Style (CPS):** `pipelineCadastroCPS` encadeia as etapas do cadastro passando
-  continuações explícitas de erro e de sucesso, em vez de devolver um `Either` intermediário.
+* **Continuation Passing Style (CPS):** encadeia etapas de validação em fluxos de negócio através de continuações explícitas de erro (`onErro`) e sucesso (`onSucesso`), sem intermediários:
+  * `pipelineCadastroCPS`: valida campos do cadastro, força da senha e unicidade de e-mail.
+  * `pipelineMatriculaCPS`: valida sequencialmente a existência do aluno, do curso e a ausência de duplicidade no `EnrollmentsController`.
 * **Lazy evaluation:** `variacoesDeEmail` é uma lista **infinita** de alternativas de e-mail; graças à
   avaliação preguiçosa, `primeiroEmailLivre` consome apenas até achar a primeira variação disponível
   (usada para sugerir um e-mail quando o informado já existe).

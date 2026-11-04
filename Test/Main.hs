@@ -262,6 +262,35 @@ specs = do
             executa dados (Right ()) (Just "Este e-mail já está em uso. Que tal nicolly1@unifor.br?")
                 `shouldBe` "erro: Este e-mail já está em uso. Que tal nicolly1@unifor.br?"
 
+    describe "pipelineMatriculaCPS (Continuation Passing Style no fluxo de matrícula)" do
+        let novaMatricula = matricula "00000000-0000-0000-0000-0000000000e4" ana cursoSQL Ativa
+            executa m ss cs es = pipelineMatriculaCPS m ss cs es (\err -> "erro: " <> mensagemErroMatricula err) (const "ok")
+
+        it "invoca onSucesso quando aluno e curso existem e não há duplicidade" do
+            executa novaMatricula [ana, bruno] [cursoHaskell, cursoSQL] [m1, m2] `shouldBe` "ok"
+
+        it "aborta com AlunoNaoEncontrado quando o aluno não está cadastrado" do
+            let alunoInexistente = newRecord @Student |> set #id "00000000-0000-0000-0000-000000000099"
+                mInvalida = matricula "00000000-0000-0000-0000-0000000000e4" alunoInexistente cursoSQL Ativa
+            executa mInvalida [ana, bruno] [cursoHaskell, cursoSQL] []
+                `shouldBe` "erro: Selecione um aluno válido"
+
+        it "aborta com CursoNaoEncontrado quando o curso não está cadastrado" do
+            let cursoInexistente = newRecord @Course |> set #id "00000000-0000-0000-0000-000000000099"
+                mInvalida = matricula "00000000-0000-0000-0000-0000000000e4" ana cursoInexistente Ativa
+            executa mInvalida [ana, bruno] [cursoHaskell, cursoSQL] []
+                `shouldBe` "erro: Selecione um curso válido"
+
+        it "aborta com MatriculaDuplicada quando o aluno já possui matrícula no curso" do
+            -- m1 é matrícula de Ana no cursoHaskell
+            let mDuplicada = matricula "00000000-0000-0000-0000-0000000000e5" ana cursoHaskell Ativa
+            executa mDuplicada [ana, bruno] [cursoHaskell, cursoSQL] [m1]
+                `shouldBe` "erro: Este aluno já está matriculado neste curso"
+
+        it "permite validação em CPS retornando Either diretamente via continuações" do
+            pipelineMatriculaCPS novaMatricula [ana, bruno] [cursoHaskell, cursoSQL] [m1, m2] Left Right
+                `shouldBe` Right novaMatricula
+
     describe "avaliação preguiçosa (variacoesDeEmail / primeiroEmailLivre)" do
         it "gera variações sufixadas do e-mail" do
             take 3 (variacoesDeEmail "ana@unifor.br")

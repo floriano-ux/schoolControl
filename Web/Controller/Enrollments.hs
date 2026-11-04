@@ -23,19 +23,27 @@ instance Controller EnrollmentsController where
 
     action CreateEnrollmentAction = do
         exigirPermissao Gerenciar Matriculas
+        students            <- query @Student |> orderBy #name |> fetch
+        courses             <- query @Course |> orderBy #name |> fetch
+        existingEnrollments <- query @Enrollment |> fetch
+
         let enrollment = newRecord @Enrollment
-        enrollment
-            |> fill @'["studentId", "courseId", "status"]
-            |> validarMatriculaUnica
-            >>= ifValid \case
-                Left enrollment -> do
-                    students <- query @Student |> orderBy #name |> fetch
-                    courses  <- query @Course |> orderBy #name |> fetch
-                    render NewView { .. }
-                Right enrollment -> do
-                    enrollment |> createRecord
-                    setSuccessMessage "Matrícula criada"
-                    redirectTo EnrollmentsAction
+                |> fill @'["studentId", "courseId", "status"]
+
+        -- Encadeia a validação em CPS (aluno -> curso -> duplicidade).
+        pipelineMatriculaCPS enrollment students courses existingEnrollments
+            (\erro -> do
+                let enrollmentComErro = case erro of
+                        AlunoNaoEncontrado -> enrollment |> attachFailure #studentId (mensagemErroMatricula erro)
+                        CursoNaoEncontrado -> enrollment |> attachFailure #courseId (mensagemErroMatricula erro)
+                        MatriculaDuplicada -> enrollment |> attachFailure #courseId (mensagemErroMatricula erro)
+                render NewView { enrollment = enrollmentComErro, students, courses }
+            )
+            (\matriculaValida -> do
+                matriculaValida |> createRecord
+                setSuccessMessage "Matrícula criada"
+                redirectTo EnrollmentsAction
+            )
 
     action EditEnrollmentAction { enrollmentId } = do
         exigirPermissao Gerenciar Matriculas
@@ -60,13 +68,3 @@ instance Controller EnrollmentsController where
         deleteRecord enrollment
         setSuccessMessage "Matrícula excluída"
         redirectTo EnrollmentsAction
-
--- Espelha a restrição UNIQUE (student_id, course_id) do banco.
-validarMatriculaUnica enrollment = do
-    existente <- query @Enrollment
-        |> filterWhere (#studentId, enrollment.studentId)
-        |> filterWhere (#courseId, enrollment.courseId)
-        |> fetchOneOrNothing
-    pure case existente of
-        Just _  -> enrollment |> attachFailure #courseId "Este aluno já está matriculado neste curso"
-        Nothing -> enrollment
