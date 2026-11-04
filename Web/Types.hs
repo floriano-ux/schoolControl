@@ -33,6 +33,7 @@ data CoursesController
 data EnrollmentsController
     = EnrollmentsAction
     | NewEnrollmentAction
+    | ShowEnrollmentAction { enrollmentId :: !(Id Enrollment) }
     | CreateEnrollmentAction
     | EditEnrollmentAction { enrollmentId :: !(Id Enrollment) }
     | UpdateEnrollmentAction { enrollmentId :: !(Id Enrollment) }
@@ -42,6 +43,7 @@ data EnrollmentsController
 data GradesController
     = GradesAction
     | NewGradeAction
+    | ShowGradeAction { gradeId :: !(Id Grade) }
     | CreateGradeAction
     | EditGradeAction { gradeId :: !(Id Grade) }
     | UpdateGradeAction { gradeId :: !(Id Grade) }
@@ -55,6 +57,7 @@ data ReportsController
 data UsersController
     = UsersAction
     | NewUserAction
+    | ShowUserAction { userId :: !(Id User) }
     | CreateUserAction
     | EditUserAction { userId :: !(Id User) }
     | UpdateUserAction { userId :: !(Id User) }

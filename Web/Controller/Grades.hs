@@ -3,6 +3,7 @@ module Web.Controller.Grades where
 import Web.Controller.Prelude
 import Web.View.Grades.Index
 import Web.View.Grades.New
+import Web.View.Grades.Show
 import Web.View.Grades.Edit
 
 instance Controller GradesController where
@@ -14,6 +15,13 @@ instance Controller GradesController where
         students    <- query @Student |> orderBy #name |> fetch
         courses     <- query @Course |> orderBy #name |> fetch
         render IndexView { .. }
+
+    action ShowGradeAction { gradeId } = do
+        grade      <- fetch gradeId
+        enrollment <- fetch grade.enrollmentId
+        student    <- fetch enrollment.studentId
+        course     <- fetch enrollment.courseId
+        render ShowView { .. }
 
     action NewGradeAction = do
         exigirPermissao Gerenciar Notas

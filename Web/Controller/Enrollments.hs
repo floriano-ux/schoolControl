@@ -3,6 +3,7 @@ module Web.Controller.Enrollments where
 import Web.Controller.Prelude
 import Web.View.Enrollments.Index
 import Web.View.Enrollments.New
+import Web.View.Enrollments.Show
 import Web.View.Enrollments.Edit
 
 instance Controller EnrollmentsController where
@@ -13,6 +14,12 @@ instance Controller EnrollmentsController where
         students    <- query @Student |> orderBy #name |> fetch
         courses     <- query @Course |> orderBy #name |> fetch
         render IndexView { .. }
+
+    action ShowEnrollmentAction { enrollmentId } = do
+        enrollment <- fetch enrollmentId
+        student    <- fetch enrollment.studentId
+        course     <- fetch enrollment.courseId
+        render ShowView { .. }
 
     action NewEnrollmentAction = do
         exigirPermissao Gerenciar Matriculas

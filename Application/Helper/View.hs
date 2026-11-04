@@ -5,6 +5,7 @@ module Application.Helper.View
     , linkExcluir
     , cabecalhoPagina
     , badgeStatus
+    , badgeSituacao
     ) where
 
 import IHP.ViewPrelude
@@ -55,6 +56,17 @@ badgeStatus status = [hsx|<span class={"badge " <> cor}>{nomeDoStatus status}</s
             Ativa     -> "bg-success"
             Trancada  -> "bg-warning text-dark"
             Concluida -> "bg-primary"
+
+-- Badge colorido para a situação do aluno (boletim).
+badgeSituacao :: Situacao -> Html
+badgeSituacao situacao = [hsx|<span class={"badge " <> cor}>{nomeDaSituacao situacao}</span>|]
+    where
+        cor :: Text
+        cor = case situacao of
+            Aprovado      -> "bg-success"
+            Reprovado     -> "bg-danger"
+            AguardandoAV3 -> "bg-warning text-dark"
+            Trancado      -> "bg-secondary"
 
 
 -- Opções dos <select> dos formulários

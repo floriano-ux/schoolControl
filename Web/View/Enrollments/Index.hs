@@ -22,6 +22,7 @@ instance View IndexView where
                             <th>Status</th>
                             <th></th>
                             <th></th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>{forEach linhas renderLinha}</tbody>
@@ -44,6 +45,7 @@ instance View IndexView where
                     <td>{aluno}</td>
                     <td>{curso}</td>
                     <td>{badgeStatus enrollment.status}</td>
+                    <td><a href={ShowEnrollmentAction enrollment.id}>Ver</a></td>
                     <td>{when (pode Gerenciar Matriculas) (editar enrollment)}</td>
                     <td>{when (pode Gerenciar Matriculas) (linkExcluir (pathTo (DeleteEnrollmentAction enrollment.id)))}</td>
                 </tr>
