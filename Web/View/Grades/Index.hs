@@ -31,6 +31,7 @@ instance View IndexView where
                             <th>Conceito</th>
                             <th></th>
                             <th></th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>{forEach linhas renderLinha}</tbody>
@@ -64,19 +65,10 @@ instance View IndexView where
                     <td class="text-end fw-bold">{formatarNota (mediaFinal grade)}</td>
                     <td>{badgeSituacao (situacaoDaMatricula enrollment.status grade)}</td>
                     <td>{show (classificarMedia (mediaFinal grade))}</td>
+                    <td><a href={ShowGradeAction grade.id}>Ver</a></td>
                     <td>{when (pode Gerenciar Notas) (editar grade)}</td>
                     <td>{when (pode Gerenciar Notas) (linkExcluir (pathTo (DeleteGradeAction grade.id)))}</td>
                 </tr>
             |]
 
             editar grade = [hsx|<a href={EditGradeAction grade.id} class="text-muted">Editar</a>|]
-
-badgeSituacao :: Situacao -> Html
-badgeSituacao situacao = [hsx|<span class={"badge " <> cor}>{nomeDaSituacao situacao}</span>|]
-    where
-        cor :: Text
-        cor = case situacao of
-            Aprovado      -> "bg-success"
-            Reprovado     -> "bg-danger"
-            AguardandoAV3 -> "bg-warning text-dark"
-            Trancado      -> "bg-secondary"

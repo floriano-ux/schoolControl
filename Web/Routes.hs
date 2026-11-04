@@ -34,6 +34,7 @@ DELETE /DeleteCourse?courseId DeleteCourseAction
 GET /Enrollments EnrollmentsAction
 GET /NewEnrollment NewEnrollmentAction
 POST /CreateEnrollment CreateEnrollmentAction
+GET /ShowEnrollment?enrollmentId ShowEnrollmentAction
 GET /EditEnrollment?enrollmentId EditEnrollmentAction
 POST /UpdateEnrollment?enrollmentId UpdateEnrollmentAction
 DELETE /DeleteEnrollment?enrollmentId DeleteEnrollmentAction
@@ -43,6 +44,7 @@ DELETE /DeleteEnrollment?enrollmentId DeleteEnrollmentAction
 GET /Grades GradesAction
 GET /NewGrade NewGradeAction
 POST /CreateGrade CreateGradeAction
+GET /ShowGrade?gradeId ShowGradeAction
 GET /EditGrade?gradeId EditGradeAction
 POST /UpdateGrade?gradeId UpdateGradeAction
 DELETE /DeleteGrade?gradeId DeleteGradeAction
@@ -56,6 +58,7 @@ GET /Reports ReportsAction
 GET /Users UsersAction
 GET /NewUser NewUserAction
 POST /CreateUser CreateUserAction
+GET /ShowUser?userId ShowUserAction
 GET /EditUser?userId EditUserAction
 POST /UpdateUser?userId UpdateUserAction
 DELETE /DeleteUser?userId DeleteUserAction

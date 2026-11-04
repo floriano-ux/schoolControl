@@ -64,6 +64,10 @@ module Application.Domain
     , pipelineCadastroCPS
     , variacoesDeEmail
     , primeiroEmailLivre
+      -- Pipeline de Matrícula em CPS
+    , ErroMatricula (..)
+    , mensagemErroMatricula
+    , pipelineMatriculaCPS
     ) where
 
 import IHP.Prelude
@@ -566,6 +570,58 @@ pipelineCadastroCPS dados forcaSenha emailEmUso onErro onSucesso =
     mensagemDoPrimeiro erros = case erros of
         (erro : _) -> mensagemDoCadastro erro
         []         -> "Dados inválidos"
+
+
+-- ---------------------------------------------------------------------------
+-- Pipeline de matrícula em Continuation Passing Style (CPS)
+--
+-- Exemplo clássico da ementa: encadeamento de validações onde cada etapa
+-- recebe explicitamente duas continuações: 'onErro' (para abortar o fluxo
+-- com o erro específico) e 'k' (para continuar para o próximo passo).
+-- O fluxo valida sequencialmente:
+--   1. Existência do aluno selecionado
+--   2. Existência do curso selecionado
+--   3. Ausência de duplicidade (aluno já matriculado no curso)
+-- Se todas as etapas passarem, 'onSucesso' é invocada com a matrícula válida.
+-- ---------------------------------------------------------------------------
+
+data ErroMatricula
+    = AlunoNaoEncontrado
+    | CursoNaoEncontrado
+    | MatriculaDuplicada
+    deriving (Eq, Show)
+
+mensagemErroMatricula :: ErroMatricula -> Text
+mensagemErroMatricula AlunoNaoEncontrado = "Selecione um aluno válido"
+mensagemErroMatricula CursoNaoEncontrado = "Selecione um curso válido"
+mensagemErroMatricula MatriculaDuplicada = "Este aluno já está matriculado neste curso"
+
+pipelineMatriculaCPS
+    :: Enrollment             -- ^ Matrícula a ser validada
+    -> [Student]              -- ^ Lista de alunos existentes
+    -> [Course]               -- ^ Lista de cursos existentes
+    -> [Enrollment]           -- ^ Matrículas já cadastradas
+    -> (ErroMatricula -> r)   -- ^ Continuação de erro (curto-circuito)
+    -> (Enrollment -> r)      -- ^ Continuação de sucesso
+    -> r
+pipelineMatriculaCPS enrollment students courses existingEnrollments onErro onSucesso =
+    validarAluno alunoExiste onErro \() ->
+        validarCurso cursoExiste onErro \() ->
+            validarDuplicidade semDuplicidade onErro \() ->
+                onSucesso enrollment
+  where
+    alunoExiste = any (\s -> s.id == enrollment.studentId) students
+    cursoExiste = any (\c -> c.id == enrollment.courseId) courses
+    semDuplicidade = not (any (\e -> e.studentId == enrollment.studentId && e.courseId == enrollment.courseId && e.id /= enrollment.id) existingEnrollments)
+
+    validarAluno True  _   k = k ()
+    validarAluno False err _ = err AlunoNaoEncontrado
+
+    validarCurso True  _   k = k ()
+    validarCurso False err _ = err CursoNaoEncontrado
+
+    validarDuplicidade True  _   k = k ()
+    validarDuplicidade False err _ = err MatriculaDuplicada
 
 
 -- ---------------------------------------------------------------------------

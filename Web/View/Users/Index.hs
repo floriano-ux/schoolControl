@@ -19,6 +19,7 @@ instance View IndexView where
                             <th>CPF</th>
                             <th></th>
                             <th></th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>{forEach users renderUser}</tbody>
@@ -39,6 +40,7 @@ renderUser user = [hsx|
         <td>{user.email}</td>
         <td><span class="badge bg-secondary">{nomeDoPapel user.userRole}</span></td>
         <td>{maybe "—" (const "••• cadastrado") user.document :: Text}</td>
+        <td><a href={ShowUserAction user.id}>Ver</a></td>
         <td><a href={EditUserAction user.id} class="text-muted">Editar</a></td>
         <td>{linkExcluir (pathTo (DeleteUserAction user.id))}</td>
     </tr>

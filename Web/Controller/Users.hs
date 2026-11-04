@@ -3,6 +3,7 @@ module Web.Controller.Users where
 import Web.Controller.Prelude
 import Web.View.Users.Index
 import Web.View.Users.New
+import Web.View.Users.Show
 import Web.View.Users.Edit
 import qualified Data.Text as Text
 
@@ -13,6 +14,12 @@ instance Controller UsersController where
     action UsersAction = do
         users <- query @User |> orderBy #name |> fetch
         render IndexView { .. }
+
+    action ShowUserAction { userId } = do
+        user <- fetch userId
+        config <- carregarAuthConfig
+        let documento = decifrarOpcional config user.document
+        render ShowView { user, documento }
 
     action NewUserAction = do
         let user = newRecord @User

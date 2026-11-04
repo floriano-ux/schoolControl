@@ -10,8 +10,7 @@ instance Controller ReportsController where
     -- 'autoRefresh' ativa a reatividade nativa do IHP: monitora as tabelas consultadas
     -- (Student, Course, Enrollment, Grade) e envia diffs DOM via WebSocket (morphdom)
     -- sempre que o banco de dados mudar, sem necessidade de JS ou Miso/Obelisk.
-    action ReportsAction = do
-        autoRefresh
+    action ReportsAction = autoRefresh do
         students    <- query @Student |> fetch
         courses     <- query @Course |> orderBy #name |> fetch
         enrollments <- query @Enrollment |> fetch
