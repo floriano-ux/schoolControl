@@ -7,7 +7,11 @@ instance Controller ReportsController where
     beforeAction = exigirPermissao Visualizar Relatorios
 
     -- Busca as tabelas uma vez e monta todos os relatórios com as funções puras do domínio.
+    -- 'autoRefresh' ativa a reatividade nativa do IHP: monitora as tabelas consultadas
+    -- (Student, Course, Enrollment, Grade) e envia diffs DOM via WebSocket (morphdom)
+    -- sempre que o banco de dados mudar, sem necessidade de JS ou Miso/Obelisk.
     action ReportsAction = do
+        autoRefresh
         students    <- query @Student |> fetch
         courses     <- query @Course |> orderBy #name |> fetch
         enrollments <- query @Enrollment |> fetch

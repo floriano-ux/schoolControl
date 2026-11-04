@@ -315,6 +315,39 @@ a.card:hover {
     background: var(--sga-navy) !important;
 }
 
+.badge-live {
+    background: #e8f5e9 !important;
+    color: #2e7d32 !important;
+    border: 1px solid #c8e6c9;
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    font-size: .8rem;
+}
+
+.badge-live::before {
+    content: '';
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: #2e7d32;
+    box-shadow: 0 0 0 0 rgba(46, 125, 50, 0.7);
+    animation: sga-pulse 2s infinite;
+}
+
+@keyframes sga-pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(46, 125, 50, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 6px rgba(46, 125, 50, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(46, 125, 50, 0);
+    }
+}
+
 /* Cabeçalho de página (título + ação) */
 .sga-page-head {
     display: flex;

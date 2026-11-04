@@ -25,6 +25,11 @@ instance View IndexView where
                     Acompanhamento acadêmico com médias, ranking e filtros dinâmicos calculados puramente em Haskell.
                 </p>
             </div>
+            <div class="sga-page-actions">
+                <span class="badge badge-live" title="Atualização automática em tempo real via IHP AutoRefresh">
+                    Tempo real
+                </span>
+            </div>
         </div>
 
         <!-- Faixa de KPIs -->
