@@ -33,9 +33,12 @@ defaultLayout inner = [hsx|
 -- O menu mostra só as áreas que o papel do usuário logado pode visualizar.
 navbar :: Html
 navbar = [hsx|
-    <nav class="navbar navbar-expand navbar-dark bg-dark">
+    <nav class="navbar navbar-expand sga-navbar">
         <div class="container">
-            <a class="navbar-brand" href="/">SGA-Func</a>
+            <a class="navbar-brand" href="/">
+                <span class="sga-brand-mark">SGA</span>
+                <span>SGA-Func</span>
+            </a>
             <div class="navbar-nav me-auto">
                 {forEach recursos linkDoMenu}
             </div>
@@ -76,6 +79,9 @@ linkDoMenu recurso = case recurso of
 
 stylesheets :: Html
 stylesheets = [hsx|
+        <link rel="preconnect" href="https://fonts.googleapis.com"/>
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin"/>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@500;600;700&display=swap"/>
         <link rel="stylesheet" href={assetPath "/vendor/bootstrap-5.3.8/bootstrap.min.css"}/>
         <link rel="stylesheet" href={assetPath "/vendor/flatpickr.min.css"}/>
         <link rel="stylesheet" href={assetPath "/app.css"}/>

@@ -7,30 +7,29 @@ instance View IndexView where
     html IndexView { .. } = [hsx|
         {breadcrumb}
 
-        <h1>
-            Estudantes
-            {when (pode Gerenciar Estudantes) novoEstudante}
-        </h1>
-        <div class="table-responsive">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Nome</th>
-                        <th>E-mail</th>
-                        <th></th>
-                        <th></th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>{forEach students renderStudent}</tbody>
-            </table>
+        {cabecalhoPagina "Estudantes" (when (pode Gerenciar Estudantes) novoEstudante)}
+        <div class="card">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>E-mail</th>
+                            <th></th>
+                            <th></th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>{forEach students renderStudent}</tbody>
+                </table>
+            </div>
         </div>
     |]
         where
             breadcrumb = renderBreadcrumb
                 [ breadcrumbLink "Estudantes" StudentsAction
                 ]
-            novoEstudante = [hsx|<a href={pathTo NewStudentAction} class="btn btn-primary ms-4">+ Novo estudante</a>|]
+            novoEstudante = [hsx|<a href={pathTo NewStudentAction} class="btn btn-primary">+ Novo estudante</a>|]
 
 renderStudent :: Student -> Html
 renderStudent student = [hsx|

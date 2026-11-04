@@ -8,7 +8,11 @@ instance View (NewView User) where
             <div class="col-md-5 col-lg-4">
                 <div class="card shadow-sm">
                     <div class="card-body p-4">
-                        <h1 class="h4 mb-4 text-center">Entrar no SGA-Func</h1>
+                        <div class="sga-auth-head">
+                            <span class="sga-auth-mark">SGA</span>
+                            <h1 class="h4 mb-1">Entrar no SGA-Func</h1>
+                            <p class="sga-auth-sub mb-0">Acesse o painel de gestão acadêmica</p>
+                        </div>
                         {renderForm user}
                         <p class="text-center text-muted mt-3 mb-0">
                             Não tem conta? <a href={NewRegistrationAction}>Criar conta</a>

@@ -12,38 +12,37 @@ instance View IndexView where
     html IndexView { .. } = [hsx|
         {breadcrumb}
 
-        <h1>
-            Notas
-            {when (pode Gerenciar Notas) lancarNotas}
-        </h1>
+        {cabecalhoPagina "Notas" (when (pode Gerenciar Notas) lancarNotas)}
         <p class="text-muted small">
             AVn = 70% PE + 30% AVf · NF = ((AV1 + AV2) / 2 + AV3) / 2 · aprovado com NF ≥ 5,0
         </p>
-        <div class="table-responsive">
-            <table class="table align-middle">
-                <thead>
-                    <tr>
-                        <th>Aluno</th>
-                        <th>Curso</th>
-                        <th class="text-end">AV1</th>
-                        <th class="text-end">AV2</th>
-                        <th class="text-end">AV3</th>
-                        <th class="text-end">NF</th>
-                        <th>Situação</th>
-                        <th>Conceito</th>
-                        <th></th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>{forEach linhas renderLinha}</tbody>
-            </table>
+        <div class="card">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Aluno</th>
+                            <th>Curso</th>
+                            <th class="text-end">AV1</th>
+                            <th class="text-end">AV2</th>
+                            <th class="text-end">AV3</th>
+                            <th class="text-end">NF</th>
+                            <th>Situação</th>
+                            <th>Conceito</th>
+                            <th></th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>{forEach linhas renderLinha}</tbody>
+                </table>
+            </div>
         </div>
     |]
         where
             breadcrumb = renderBreadcrumb
                 [ breadcrumbLink "Notas" GradesAction
                 ]
-            lancarNotas = [hsx|<a href={pathTo NewGradeAction} class="btn btn-primary ms-4">+ Lançar notas</a>|]
+            lancarNotas = [hsx|<a href={pathTo NewGradeAction} class="btn btn-primary">+ Lançar notas</a>|]
 
             -- Junta cada nota com a sua matrícula (mapMaybe descarta notas órfãs)
             linhas = sortOn (\(aluno, curso, _, _) -> (aluno, curso)) (mapMaybe comMatricula grades)

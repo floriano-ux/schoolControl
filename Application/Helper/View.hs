@@ -3,6 +3,8 @@ module Application.Helper.View
     , formatarNota
     , formatarMedia
     , linkExcluir
+    , cabecalhoPagina
+    , badgeStatus
     ) where
 
 import IHP.ViewPrelude
@@ -34,6 +36,25 @@ linkExcluir :: Text -> Html
 linkExcluir caminho = [hsx|
     <a href={caminho} class="js-delete text-danger" data-confirm="Tem certeza que deseja excluir?">Excluir</a>
 |]
+
+-- Cabeçalho de página: título à esquerda e uma ação opcional (ex.: botão "+ Novo") à direita.
+cabecalhoPagina :: Text -> Html -> Html
+cabecalhoPagina titulo acao = [hsx|
+    <div class="sga-page-head">
+        <h1 class="h3 mb-0">{titulo}</h1>
+        <div class="sga-page-actions">{acao}</div>
+    </div>
+|]
+
+-- Badge colorido para o status da matrícula.
+badgeStatus :: EnrollmentStatus -> Html
+badgeStatus status = [hsx|<span class={"badge " <> cor}>{nomeDoStatus status}</span>|]
+    where
+        cor :: Text
+        cor = case status of
+            Ativa     -> "bg-success"
+            Trancada  -> "bg-warning text-dark"
+            Concluida -> "bg-primary"
 
 
 -- Opções dos <select> dos formulários

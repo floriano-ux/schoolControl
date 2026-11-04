@@ -1,0 +1,497 @@
+/* ==========================================================================
+   SGA-Func — Design System
+   Inspiração visual: Symbolab (teal/verde-água + navy, fundo claro, bastante
+   respiro, cantos arredondados e uma cara amigável de educação).
+   Este arquivo apenas ESTILIZA os componentes do Bootstrap já usados nas views.
+   ========================================================================== */
+
+:root {
+    /* Cores da marca */
+    --sga-primary: #15b7a6;
+    --sga-primary-hover: #0f9789;
+    --sga-primary-soft: #e3f7f4;
+    --sga-navy: #17233f;
+    --sga-navy-soft: #24324f;
+    --sga-accent: #ffb020;
+
+    /* Superfícies e texto */
+    --sga-bg: #f3f6f9;
+    --sga-surface: #ffffff;
+    --sga-border: #e6ecf2;
+    --sga-text: #1e2a44;
+    --sga-muted: #6a7991;
+
+    /* Estados */
+    --sga-success: #15b7a6;
+    --sga-danger: #e5484d;
+    --sga-warning: #f5a623;
+
+    /* Forma e profundidade */
+    --sga-radius: 16px;
+    --sga-radius-sm: 10px;
+    --sga-shadow: 0 1px 2px rgba(23, 35, 63, .04), 0 8px 24px rgba(23, 35, 63, .06);
+    --sga-shadow-sm: 0 1px 2px rgba(23, 35, 63, .06);
+
+    /* Fontes */
+    --sga-font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --sga-font-head: "Poppins", var(--sga-font);
+
+    /* Overrides de variáveis do Bootstrap */
+    --bs-body-bg: var(--sga-bg);
+    --bs-body-color: var(--sga-text);
+    --bs-primary: var(--sga-primary);
+    --bs-link-color: var(--sga-primary-hover);
+    --bs-link-hover-color: var(--sga-navy);
+    --bs-border-color: var(--sga-border);
+}
+
+/* --------------------------------------------------------------------------
+   Base
+   -------------------------------------------------------------------------- */
+
+body {
+    font-family: var(--sga-font);
+    background-color: var(--sga-bg);
+    color: var(--sga-text);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, h5, h6,
+.h1, .h2, .h3, .h4, .h5, .h6 {
+    font-family: var(--sga-font-head);
+    font-weight: 600;
+    color: var(--sga-navy);
+    letter-spacing: -.01em;
+}
+
+a {
+    color: var(--sga-primary-hover);
+    text-decoration: none;
+}
+
+a:hover {
+    color: var(--sga-navy);
+}
+
+code {
+    background: var(--sga-primary-soft);
+    color: var(--sga-primary-hover);
+    padding: .1rem .35rem;
+    border-radius: 6px;
+    font-size: .875em;
+}
+
+.container {
+    max-width: 1080px;
+}
+
+/* --------------------------------------------------------------------------
+   Navbar
+   -------------------------------------------------------------------------- */
+
+.sga-navbar {
+    background: var(--sga-surface);
+    border-bottom: 1px solid var(--sga-border);
+    box-shadow: var(--sga-shadow-sm);
+    padding-top: .6rem;
+    padding-bottom: .6rem;
+    position: sticky;
+    top: 0;
+    z-index: 1020;
+}
+
+.sga-navbar .navbar-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: .55rem;
+    font-family: var(--sga-font-head);
+    font-weight: 700;
+    color: var(--sga-navy);
+    letter-spacing: -.02em;
+}
+
+/* Marca: quadradinho arredondado com as iniciais */
+.sga-brand-mark {
+    display: inline-grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--sga-primary), #0fbfae);
+    color: #fff;
+    font-size: .82rem;
+    font-weight: 700;
+    letter-spacing: .02em;
+    box-shadow: 0 4px 10px rgba(21, 183, 166, .35);
+}
+
+.sga-navbar .nav-link {
+    color: var(--sga-navy-soft);
+    font-weight: 500;
+    padding: .4rem .85rem;
+    border-radius: var(--sga-radius-sm);
+    transition: background-color .15s ease, color .15s ease;
+}
+
+.sga-navbar .nav-link:hover {
+    color: var(--sga-primary-hover);
+    background: var(--sga-primary-soft);
+}
+
+.sga-navbar .navbar-text {
+    color: var(--sga-muted);
+}
+
+/* --------------------------------------------------------------------------
+   Botões
+   -------------------------------------------------------------------------- */
+
+.btn {
+    border-radius: var(--sga-radius-sm);
+    font-weight: 600;
+    padding: .5rem 1.1rem;
+    transition: transform .04s ease, background-color .15s ease, box-shadow .15s ease;
+}
+
+.btn:active {
+    transform: translateY(1px);
+}
+
+.btn-primary {
+    --bs-btn-bg: var(--sga-primary);
+    --bs-btn-border-color: var(--sga-primary);
+    --bs-btn-hover-bg: var(--sga-primary-hover);
+    --bs-btn-hover-border-color: var(--sga-primary-hover);
+    --bs-btn-active-bg: var(--sga-primary-hover);
+    --bs-btn-active-border-color: var(--sga-primary-hover);
+    --bs-btn-disabled-bg: var(--sga-primary);
+    --bs-btn-disabled-border-color: var(--sga-primary);
+    box-shadow: 0 6px 16px rgba(21, 183, 166, .25);
+}
+
+.btn-outline-primary {
+    --bs-btn-color: var(--sga-primary-hover);
+    --bs-btn-border-color: var(--sga-primary);
+    --bs-btn-hover-bg: var(--sga-primary);
+    --bs-btn-hover-border-color: var(--sga-primary);
+    --bs-btn-active-bg: var(--sga-primary-hover);
+}
+
+.btn-secondary {
+    --bs-btn-bg: var(--sga-navy);
+    --bs-btn-border-color: var(--sga-navy);
+    --bs-btn-hover-bg: var(--sga-navy-soft);
+    --bs-btn-hover-border-color: var(--sga-navy-soft);
+}
+
+/* --------------------------------------------------------------------------
+   Cards
+   -------------------------------------------------------------------------- */
+
+.card {
+    border: 1px solid var(--sga-border);
+    border-radius: var(--sga-radius);
+    box-shadow: var(--sga-shadow);
+    background: var(--sga-surface);
+    overflow: hidden;
+}
+
+.card-header {
+    background: transparent;
+    border-bottom: 1px solid var(--sga-border);
+    font-family: var(--sga-font-head);
+    font-weight: 600;
+    color: var(--sga-navy);
+    padding: .9rem 1.1rem;
+}
+
+.card-body {
+    padding: 1.25rem;
+}
+
+.card-footer {
+    background: var(--sga-primary-soft);
+    border-top: 1px solid var(--sga-border);
+}
+
+/* Card que é um link (atalhos do painel): eleva no hover */
+a.card {
+    transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+}
+
+a.card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(23, 35, 63, .12);
+    border-color: var(--sga-primary);
+}
+
+/* --------------------------------------------------------------------------
+   Tabelas
+   -------------------------------------------------------------------------- */
+
+.table {
+    --bs-table-bg: transparent;
+    margin-bottom: 0;
+    color: var(--sga-text);
+}
+
+.table > thead th {
+    font-family: var(--sga-font-head);
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--sga-muted);
+    border-bottom: 1px solid var(--sga-border);
+    padding: .75rem 1rem;
+}
+
+.table > tbody td {
+    padding: .8rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--sga-border);
+}
+
+.table > tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.table-hover > tbody > tr:hover > * {
+    --bs-table-hover-bg: var(--sga-primary-soft);
+}
+
+/* Tabelas dentro de cards ficam coladas nas bordas do card */
+.card > .table,
+.card > .table-responsive > .table {
+    border-radius: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Formulários
+   -------------------------------------------------------------------------- */
+
+.form-label {
+    font-weight: 600;
+    color: var(--sga-navy);
+    margin-bottom: .35rem;
+}
+
+.form-control,
+.form-select {
+    border: 1px solid var(--sga-border);
+    border-radius: var(--sga-radius-sm);
+    padding: .6rem .85rem;
+    background: var(--sga-surface);
+    color: var(--sga-text);
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--sga-primary);
+    box-shadow: 0 0 0 .2rem rgba(21, 183, 166, .18);
+}
+
+.form-text {
+    color: var(--sga-muted);
+}
+
+/* --------------------------------------------------------------------------
+   Badges
+   -------------------------------------------------------------------------- */
+
+.badge {
+    font-weight: 600;
+    padding: .38em .7em;
+    border-radius: 999px;
+    letter-spacing: .01em;
+}
+
+.badge.bg-secondary {
+    background: var(--sga-primary-soft) !important;
+    color: var(--sga-primary-hover) !important;
+}
+
+.badge.bg-primary {
+    background: var(--sga-navy) !important;
+}
+
+/* Cabeçalho de página (título + ação) */
+.sga-page-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.25rem;
+}
+
+/* --------------------------------------------------------------------------
+   Alertas / mensagens flash
+   -------------------------------------------------------------------------- */
+
+.alert {
+    border: 1px solid transparent;
+    border-radius: var(--sga-radius-sm);
+    box-shadow: var(--sga-shadow-sm);
+    padding: .85rem 1.1rem;
+}
+
+.alert-success {
+    background: var(--sga-primary-soft);
+    border-color: #bfeee8;
+    color: #0c7a6f;
+}
+
+.alert-danger {
+    background: #fde8e8;
+    border-color: #f7c7c9;
+    color: #b42318;
+}
+
+/* --------------------------------------------------------------------------
+   Breadcrumb
+   -------------------------------------------------------------------------- */
+
+.breadcrumb {
+    background: transparent;
+    padding: 0;
+    margin-bottom: 1rem;
+    font-size: .9rem;
+}
+
+.breadcrumb a {
+    color: var(--sga-muted);
+}
+
+.breadcrumb a:hover {
+    color: var(--sga-primary-hover);
+}
+
+.breadcrumb-item.active {
+    color: var(--sga-navy);
+    font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+   Utilitários da marca
+   -------------------------------------------------------------------------- */
+
+.text-danger {
+    color: var(--sga-danger) !important;
+}
+
+.shadow-sm {
+    box-shadow: var(--sga-shadow) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Página inicial: hero da vitrine e painel do usuário
+   -------------------------------------------------------------------------- */
+
+.sga-hero {
+    text-align: center;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 3.5rem 1rem 2.5rem;
+}
+
+.sga-hero-eyebrow {
+    display: inline-block;
+    background: var(--sga-primary-soft);
+    color: var(--sga-primary-hover);
+    font-family: var(--sga-font-head);
+    font-weight: 600;
+    font-size: .78rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: .35rem .85rem;
+    border-radius: 999px;
+    margin-bottom: 1.1rem;
+}
+
+.sga-hero-title {
+    font-size: clamp(1.9rem, 4vw, 2.8rem);
+    line-height: 1.1;
+    margin-bottom: 1rem;
+}
+
+.sga-hero-subtitle {
+    color: var(--sga-muted);
+    font-size: 1.1rem;
+    margin-bottom: 1.75rem;
+}
+
+.sga-hero-actions {
+    display: flex;
+    gap: .75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.sga-features {
+    margin-top: .5rem;
+}
+
+.sga-feature-icon,
+.sga-card-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    background: var(--sga-primary-soft);
+    font-size: 1.4rem;
+    margin-bottom: .85rem;
+}
+
+/* Cabeçalho de boas-vindas do painel */
+.sga-greeting {
+    background: linear-gradient(135deg, var(--sga-navy), var(--sga-navy-soft));
+    color: #fff;
+    border-radius: var(--sga-radius);
+    padding: 1.6rem 1.8rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--sga-shadow);
+}
+
+.sga-greeting h1 {
+    color: #fff;
+    margin: 0;
+}
+
+.sga-greeting p {
+    color: rgba(255, 255, 255, .82);
+    margin: .4rem 0 0;
+}
+
+.sga-greeting .badge.bg-secondary {
+    background: rgba(255, 255, 255, .18) !important;
+    color: #fff !important;
+}
+
+/* --------------------------------------------------------------------------
+   Telas de autenticação (login e cadastro)
+   -------------------------------------------------------------------------- */
+
+.sga-auth-head {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.sga-auth-mark {
+    display: inline-grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--sga-primary), #0fbfae);
+    color: #fff;
+    font-family: var(--sga-font-head);
+    font-weight: 700;
+    box-shadow: 0 6px 16px rgba(21, 183, 166, .35);
+    margin-bottom: .9rem;
+}
+
+.sga-auth-sub {
+    color: var(--sga-muted);
+}

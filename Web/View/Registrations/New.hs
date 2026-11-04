@@ -13,7 +13,11 @@ instance View NewView where
             <div class="col-md-6 col-lg-5">
                 <div class="card shadow-sm">
                     <div class="card-body p-4">
-                        <h1 class="h4 mb-4 text-center">Criar conta no SGA-Func</h1>
+                        <div class="sga-auth-head">
+                            <span class="sga-auth-mark">SGA</span>
+                            <h1 class="h4 mb-1">Criar conta no SGA-Func</h1>
+                            <p class="sga-auth-sub mb-0">Crie sua conta de aluno em segundos</p>
+                        </div>
                         {renderForm nome email}
                         <p class="text-center text-muted mt-3 mb-0">
                             Já tem conta? <a href={NewSessionAction}>Entrar</a>
