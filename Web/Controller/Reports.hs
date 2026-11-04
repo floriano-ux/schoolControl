@@ -12,10 +12,26 @@ instance Controller ReportsController where
         courses     <- query @Course |> orderBy #name |> fetch
         enrollments <- query @Enrollment |> fetch
         grades      <- query @Grade |> fetch
-        let medias      = mediaPorCurso courses enrollments grades
-            ranking     = rankingDeAlunos students enrollments grades
-            alunos      = alunosPorCurso courses students enrollments
-            ativas      = matriculasAtivasPorCurso courses enrollments
-            situacoes   = contarPorSituacao (boletim students enrollments grades)
-            cargaTotal  = cargaHorariaTotal courses
+
+        let filtro = FiltroRelatorio
+                { cursoId = paramOrNothing @(Id Course) "courseId"
+                , status  = paramOrNothing @EnrollmentStatus "status"
+                            <|> (paramOrNothing @Text "status" >>= parseStatus)
+                }
+
+            matriculasFiltradas = aplicarFiltro filtro enrollments
+            cursosFiltrados     = filtrarCursos filtro.cursoId courses
+            linhasBoletim       = boletim students matriculasFiltradas grades
+
+            medias      = mediaPorCurso cursosFiltrados matriculasFiltradas grades
+            ranking     = rankingDeAlunos students matriculasFiltradas grades
+            alunos      = alunosPorCurso cursosFiltrados students matriculasFiltradas
+            ativas      = matriculasAtivasPorCurso cursosFiltrados matriculasFiltradas
+            situacoes   = contarPorSituacao linhasBoletim
+            cargaTotal  = cargaHorariaTotal cursosFiltrados
+
+            totalAlunos      = totalAlunosFiltrados filtro students matriculasFiltradas
+            matriculasAtivas = totalMatriculasAtivas matriculasFiltradas
+            taxaAprov        = taxaAprovacao linhasBoletim
+
         render IndexView { .. }

@@ -75,6 +75,60 @@ specs = do
             cargaHorariaTotal [cursoHaskell, cursoSQL] `shouldBe` 100
             cargaHorariaTotal [] `shouldBe` 0
 
+    describe "filtros do relatório (FiltroRelatorio, filtrarPorCurso, filtrarPorStatus)" do
+        it "filtrarPorCurso filtra matrículas pelo Id do curso quando Just" do
+            filtrarPorCurso (Just cursoHaskell.id) [m1, m2, m3] `shouldBe` [m1, m2]
+            filtrarPorCurso (Just cursoSQL.id) [m1, m2, m3] `shouldBe` [m3]
+        it "filtrarPorCurso mantém todas as matrículas quando Nothing" do
+            filtrarPorCurso Nothing [m1, m2, m3] `shouldBe` [m1, m2, m3]
+        it "filtrarPorStatus filtra pelo status quando Just" do
+            filtrarPorStatus (Just Ativa) [m1, m2, m3] `shouldBe` [m1, m2]
+            filtrarPorStatus (Just Trancada) [m1, m2, m3] `shouldBe` [m3]
+            filtrarPorStatus (Just Concluida) [m1, m2, m3] `shouldBe` []
+        it "filtrarPorStatus mantém todas as matrículas quando Nothing" do
+            filtrarPorStatus Nothing [m1, m2, m3] `shouldBe` [m1, m2, m3]
+        it "aplicarFiltro combina curso e status via record FiltroRelatorio" do
+            let filtroHaskellAtiva = FiltroRelatorio (Just cursoHaskell.id) (Just Ativa)
+            aplicarFiltro filtroHaskellAtiva [m1, m2, m3] `shouldBe` [m1, m2]
+
+            let filtroHaskellTrancada = FiltroRelatorio (Just cursoHaskell.id) (Just Trancada)
+            aplicarFiltro filtroHaskellTrancada [m1, m2, m3] `shouldBe` []
+
+            let filtroSQLTrancada = FiltroRelatorio (Just cursoSQL.id) (Just Trancada)
+            aplicarFiltro filtroSQLTrancada [m1, m2, m3] `shouldBe` [m3]
+
+            let filtroVazio' = FiltroRelatorio Nothing Nothing
+            aplicarFiltro filtroVazio' [m1, m2, m3] `shouldBe` [m1, m2, m3]
+        it "agregações passam a receber a lista já filtrada (reuso das funções atuais)" do
+            let matriculasHaskell = filtrarPorCurso (Just cursoHaskell.id) [m1, m2, m3]
+            mediaPorCurso [cursoHaskell] matriculasHaskell notasExemplo
+                `shouldBe` [("Haskell", Just 7.5)]
+            rankingDeAlunos [ana, bruno] matriculasHaskell notasExemplo
+                `shouldBe` [(1, "Ana", 9.0), (2, "Bruno", 6.0)]
+
+            -- Com apenas SQL, Bruno tem matrícula trancada e sem notas
+            let matriculasSQL = filtrarPorCurso (Just cursoSQL.id) [m1, m2, m3]
+            rankingDeAlunos [ana, bruno] matriculasSQL notasExemplo `shouldBe` []
+
+            -- Boletim com apenas matrículas ativas de Haskell
+            let ativasHaskell = aplicarFiltro (FiltroRelatorio (Just cursoHaskell.id) (Just Ativa)) [m1, m2, m3]
+            map (\(nome, media, sit) -> (nome, media, sit)) (boletim [ana, bruno] ativasHaskell notasExemplo)
+                `shouldBe` [("Ana", 9.0, Aprovado), ("Bruno", 6.0, Aprovado)]
+        it "taxaAprovacao calcula percentual ou Nothing se lista vazia" do
+            let linhas = boletim [ana, bruno] [m1, m2] notasExemplo
+            taxaAprovacao linhas `shouldBe` Just 100.0
+            taxaAprovacao [] `shouldBe` Nothing
+        it "totalMatriculasAtivas e totalAlunosFiltrados calculam KPIs puros" do
+            totalMatriculasAtivas [m1, m2, m3] `shouldBe` 2
+            totalMatriculasAtivas [m3] `shouldBe` 0
+            totalAlunosFiltrados filtroVazio [ana, bruno] [m1, m2, m3] `shouldBe` 2
+            totalAlunosFiltrados (FiltroRelatorio (Just cursoSQL.id) Nothing) [ana, bruno] [m3] `shouldBe` 1
+        it "parseStatus faz parse case-insensitive ou devolve Nothing" do
+            parseStatus "ativa" `shouldBe` Just Ativa
+            parseStatus "Ativa" `shouldBe` Just Ativa
+            parseStatus "TRANCADA" `shouldBe` Just Trancada
+            parseStatus "invalido" `shouldBe` Nothing
+
     describe "podeAcessar (papéis e permissões)" do
         it "administrador pode tudo" do
             and [ podeAcessar Admin op r | op <- [minBound .. maxBound], r <- [minBound .. maxBound] ] `shouldBe` True
