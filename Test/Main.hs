@@ -5,6 +5,9 @@ import IHP.Prelude
 import IHP.ModelSupport (newRecord)
 import Generated.Types
 import Application.Domain
+import Application.Errors
+import Application.Security
+import qualified Data.Text as Text
 import System.IO (hSetEncoding, stdout, stderr, utf8)
 
 -- Monta nota sem tocar no banco TESTEEES
@@ -300,3 +303,105 @@ specs = do
                 `shouldBe` "ana2@unifor.br"
         it "devolve o próprio e-mail quando ele já está livre" do
             primeiroEmailLivre ["outro@unifor.br"] "ana@unifor.br" `shouldBe` "ana@unifor.br"
+
+    -- -----------------------------------------------------------------------
+    -- Sprint 5: tratamento de erros monádico (Application.Errors)
+    -- -----------------------------------------------------------------------
+    describe "classificarFalhaSql (tradução de exceções do PostgreSQL)" do
+        it "unique_violation (23505) vira Conflito" do
+            classificarFalhaSql "ERROR: duplicate key value violates unique constraint \"users_email_key\" (23505)"
+                `shouldSatisfy` \case Conflito _ -> True; _ -> False
+        it "foreign_key_violation (23503) vira ErroDeValidacao" do
+            classificarFalhaSql "insert or update violates foreign key constraint (SQLSTATE 23503)"
+                `shouldSatisfy` \case ErroDeValidacao _ -> True; _ -> False
+        it "check_violation (23514) vira ErroDeValidacao" do
+            classificarFalhaSql "new row violates check constraint \"grades_pe1_check\" 23514"
+                `shouldSatisfy` \case ErroDeValidacao _ -> True; _ -> False
+        it "qualquer outra falha vira FalhaDeInfra preservando o detalhe para o log" do
+            classificarFalhaSql "connection refused" `shouldBe` FalhaDeInfra "connection refused"
+
+    describe "mensagemAppError / codigoHttp" do
+        it "nunca expõe o detalhe técnico ao usuário" do
+            mensagemAppError (FalhaDeInfra "senha do banco: xyz") `shouldNotSatisfy` Text.isInfixOf "xyz"
+        it "junta as mensagens de validação" do
+            mensagemAppError (ErroDeValidacao ["A.", "B."]) `shouldBe` "A. B."
+        it "mapeia cada erro para o status HTTP adequado" do
+            map codigoHttp [ErroDeValidacao [], NaoEncontrado "x", Conflito "x", NaoAutenticado, SemPermissao, FalhaDeInfra "x"]
+                `shouldBe` [422, 404, 409, 401, 403, 503]
+        it "traduz erros específicos dos módulos para AppError" do
+            deErroMatricula MatriculaDuplicada `shouldBe` ErroDeValidacao [mensagemErroMatricula MatriculaDuplicada]
+            deErroSenha SenhaSemNumero `shouldBe` ErroDeValidacao [mensagemDaSenha SenhaSemNumero]
+
+    describe "AppM (ExceptT AppError IO)" do
+        it "encadeia etapas e devolve Right quando todas passam" do
+            resultado <- executarApp do
+                a <- exigirJust (NaoEncontrado "A") (Just (2 :: Int))
+                b <- deEither deErroSenha (Right 3)
+                pure (a + b)
+            resultado `shouldBe` Right 5
+        it "interrompe na primeira falha (curto-circuito) sem executar o resto" do
+            resultado <- executarApp do
+                _ <- exigirJust (NaoEncontrado "Aluno") (Nothing :: Maybe Int)
+                _ <- capturarInfra "teste" (error "não deveria executar" :: IO Int)
+                pure ()
+            resultado `shouldBe` Left (NaoEncontrado "Aluno")
+        it "capturarInfra transforma exceção de IO em Left (sem derrubar o programa)" do
+            resultado <- executarApp (capturarInfra "teste" (ioError (userError "banco fora do ar") :: IO Int))
+            resultado `shouldSatisfy` \case Left (FalhaDeInfra _) -> True; _ -> False
+        it "deEither eleva a validação pura do pipeline CPS para o fluxo" do
+            -- outra matrícula (id diferente) da Ana no mesmo curso de m1
+            let duplicada = matricula "00000000-0000-0000-0000-0000000000e9" ana cursoHaskell Ativa
+            resultado <- executarApp do
+                deEither deErroMatricula
+                    (pipelineMatriculaCPS duplicada [ana] [cursoHaskell] [m1] Left Right)
+            resultado `shouldBe` Left (deErroMatricula MatriculaDuplicada)
+
+    -- -----------------------------------------------------------------------
+    -- Segurança (Application.Security): Reader, bcrypt e AES-256-GCM
+    -- -----------------------------------------------------------------------
+    describe "validarForcaSenha (Reader AuthConfig)" do
+        it "usa o tamanho mínimo vindo da configuração" do
+            avaliarForcaSenha configPadrao { minPasswordLength = 12 } "abc12345"
+                `shouldBe` Left (SenhaMuitoCurta 12)
+        it "exige número e letra" do
+            avaliarForcaSenha configPadrao "abcdefgh" `shouldBe` Left SenhaSemNumero
+            avaliarForcaSenha configPadrao "12345678" `shouldBe` Left SenhaSemLetra
+            avaliarForcaSenha configPadrao "abcd1234" `shouldBe` Right ()
+
+    describe "hash de senha (bcrypt)" do
+        let configRapida = configPadrao { bcryptCost = 4 } -- custo baixo só para o teste ser rápido
+        it "gera hash diferente da senha e que confere com ela" do
+            hash <- gerarHashSenha configRapida "senha123"
+            hash `shouldNotBe` "senha123"
+            conferirSenha "senha123" hash `shouldBe` True
+            conferirSenha "senhaErrada1" hash `shouldBe` False
+        it "usa salt: a mesma senha gera hashes diferentes" do
+            h1 <- gerarHashSenha configRapida "senha123"
+            h2 <- gerarHashSenha configRapida "senha123"
+            h1 `shouldNotBe` h2
+
+    describe "criptografia de campo (AES-256-GCM)" do
+        it "cifra e decifra de volta (ida e volta)" do
+            blob <- cifrarCampo configPadrao "123.456.789-00"
+            blob `shouldNotBe` "123.456.789-00"
+            decifrarCampo configPadrao blob `shouldBe` Just "123.456.789-00"
+        it "nonce aleatório: o mesmo texto gera cifras diferentes" do
+            b1 <- cifrarCampo configPadrao "123.456.789-00"
+            b2 <- cifrarCampo configPadrao "123.456.789-00"
+            b1 `shouldNotBe` b2
+        it "com a chave errada não decifra (Nothing, sem exceção)" do
+            blob <- cifrarCampo configPadrao "segredo"
+            let outraChave = configPadrao { encryptionKey = "0123456789abcdef0123456789abcdef" }
+            decifrarCampo outraChave blob `shouldBe` Nothing
+        it "detecta adulteração e entrada inválida" do
+            decifrarCampo configPadrao "isto-nao-e-base64!!" `shouldBe` Nothing
+            decifrarCampo configPadrao "" `shouldBe` Nothing
+        it "rejeita cifra adulterada (um caractere trocado) e truncada" do
+            blob <- cifrarCampo configPadrao "123.456.789-00"
+            let trocar c = if c == 'A' then 'B' else 'A'
+                adulterado = Text.take 20 blob <> Text.singleton (trocar (Text.index blob 20)) <> Text.drop 21 blob
+            decifrarCampo configPadrao adulterado `shouldBe` Nothing
+            decifrarCampo configPadrao (Text.take 16 blob) `shouldBe` Nothing
+        it "campo opcional em branco não é cifrado" do
+            vazio <- cifrarOpcional configPadrao "   "
+            vazio `shouldBe` Nothing

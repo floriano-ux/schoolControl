@@ -47,9 +47,17 @@ instance Controller EnrollmentsController where
                 render NewView { enrollment = enrollmentComErro, students, courses }
             )
             (\matriculaValida -> do
-                matriculaValida |> createRecord
-                setSuccessMessage "Matrícula criada"
-                redirectTo EnrollmentsAction
+                -- A gravação roda no monad AppM: se outra requisição criar a mesma
+                -- matrícula entre a validação e o INSERT, a UNIQUE (student_id, course_id)
+                -- do banco dispara e 'capturarInfra' traduz para 'Conflito' (sem erro 500).
+                resultado <- executarApp (capturarInfra "matricula" (createRecord matriculaValida))
+                case resultado of
+                    Right _ -> do
+                        setSuccessMessage "Matrícula criada"
+                        redirectTo EnrollmentsAction
+                    Left erro -> do
+                        let enrollmentComErro = enrollment |> attachFailure #courseId (mensagemAppError erro)
+                        render NewView { enrollment = enrollmentComErro, students, courses }
             )
 
     action EditEnrollmentAction { enrollmentId } = do
@@ -63,15 +71,22 @@ instance Controller EnrollmentsController where
     action UpdateEnrollmentAction { enrollmentId } = do
         exigirPermissao Gerenciar Matriculas
         enrollment <- fetch enrollmentId
-        enrollment
-            |> fill @'["status"]
-            |> updateRecord
-        setSuccessMessage "Matrícula atualizada"
-        redirectTo EnrollmentsAction
+        resultado <- executarApp do
+            capturarInfra "matricula/atualizar" (enrollment |> fill @'["status"] |> updateRecord)
+        responderComMensagem resultado "Matrícula atualizada"
 
     action DeleteEnrollmentAction { enrollmentId } = do
         exigirPermissao Gerenciar Matriculas
-        enrollment <- fetch enrollmentId
-        deleteRecord enrollment
-        setSuccessMessage "Matrícula excluída"
-        redirectTo EnrollmentsAction
+        -- Fluxo monádico: buscar (pode não existir) -> excluir (pode falhar no banco).
+        resultado <- executarApp do
+            talvez <- capturarInfra "matricula/excluir" (fetchOneOrNothing enrollmentId)
+            matricula <- exigirJust (NaoEncontrado "Matrícula") talvez
+            capturarInfra "matricula/excluir" (deleteRecord matricula)
+        responderComMensagem resultado "Matrícula excluída"
+
+-- Converte o resultado de um fluxo AppM em mensagem flash + redirecionamento.
+responderComMensagem resultado mensagemDeSucesso = do
+    case resultado of
+        Right _   -> setSuccessMessage mensagemDeSucesso
+        Left erro -> setErrorMessage (mensagemAppError erro)
+    redirectTo EnrollmentsAction

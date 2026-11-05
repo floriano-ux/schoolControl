@@ -45,16 +45,21 @@ instance Controller RegistrationsController where
                         logAuthWarn ("cadastro recusado para " <> dados.emailCadastro <> ": " <> mensagem)
                         reexibirFormulario mensagem)
                     (\ok -> do
-                        criado <- tentar "cadastro" do
-                            hashed <- gerarHashSenha config ok.senhaCadastro
-                            newRecord @User
-                                |> set #name ok.nomeCadastro
-                                |> set #email ok.emailCadastro
-                                |> set #passwordHash hashed
-                                |> set #userRole Aluno
-                                |> createRecord
+                        -- AppM: o hash (IO) e o INSERT rodam no mesmo fluxo. Se o e-mail
+                        -- for registrado por outra requisição no meio do caminho, a UNIQUE
+                        -- do banco vira 'Conflito' em vez de erro técnico genérico.
+                        criado <- executarApp do
+                            hashed <- capturarInfra "cadastro" (gerarHashSenha config ok.senhaCadastro)
+                            capturarInfra "cadastro" do
+                                newRecord @User
+                                    |> set #name ok.nomeCadastro
+                                    |> set #email ok.emailCadastro
+                                    |> set #passwordHash hashed
+                                    |> set #userRole Aluno
+                                    |> createRecord
                         case criado of
-                            Left mensagem -> reexibirFormulario mensagem
+                            Left (Conflito _) -> reexibirFormulario "Este e-mail já está em uso."
+                            Left erro -> reexibirFormulario (mensagemAppError erro)
                             Right novoUsuario -> do
                                 login novoUsuario
                                 logAuthInfo ("nova conta criada: " <> ok.emailCadastro)

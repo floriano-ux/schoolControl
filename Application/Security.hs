@@ -23,6 +23,7 @@ import qualified Data.Text.Encoding as TE
 import qualified Data.ByteString as BS
 import qualified Data.ByteArray as BA
 import Control.Monad.Reader (Reader, runReader, asks)
+import Control.Monad (guard)
 import System.Environment (lookupEnv)
 import Text.Read (readMaybe)
 
@@ -141,12 +142,15 @@ cifrarCampo config texto = do
 decifrarCampo :: AuthConfig -> Text -> Maybe Text
 decifrarCampo config blob = do
     pacote <- either (const Nothing) Just (convertFromBase Base64 (TE.encodeUtf8 blob)) :: Maybe ByteString
+    -- Pacote truncado (menor que nonce + tag) é rejeitado: sem isso, "" decifrava para Just "".
+    guard (BS.length pacote >= nonceBytes + tagBytes)
     let (nonce, resto) = BS.splitAt nonceBytes pacote
         (tag, ct)      = BS.splitAt tagBytes resto
     cipher <- maybeCryptoError (cipherInit config.encryptionKey) :: Maybe AES256
     aead   <- maybeCryptoError (aeadInit AEAD_GCM cipher nonce)
     plano  <- aeadSimpleDecrypt aead BS.empty ct (AuthTag (BA.convert tag))
-    pure (TE.decodeUtf8 plano)
+    -- decodeUtf8' (com apóstrofo) devolve Either em vez de lançar exceção.
+    either (const Nothing) Just (TE.decodeUtf8' plano)
 
 -- Campo opcional: texto em branco não é cifrado (vira Nothing); caso contrário, cifra.
 cifrarOpcional :: AuthConfig -> Text -> IO (Maybe Text)

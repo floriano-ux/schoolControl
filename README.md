@@ -101,6 +101,26 @@ Para proporcionar reatividade em tempo real sem a necessidade de reescrever o fr
 * **WebSocket e Diff de DOM:** Quando ocorrem mutações no banco de dados (por exemplo, lançamento de notas, criação ou trancamento de matrículas), o servidor IHP reexecuta a action, recomputa as métricas no domínio funcional e despacha o diff HTML via WebSocket.
 * **Atualização transparente no navegador:** O `ihp-auto-refresh.js` integrado com `morphdom` aplica a atualização cirurgicamente nos nós alterados do DOM sem recarregar a página e sem necessidade de código JavaScript manual.
 
+---
+
+## Qualidade, Testes e Arquitetura (Sprint 5)
+
+* **Tratamento de erros monádico:** `Application.Errors` define o tipo `AppError` e o monad
+  `AppM = ExceptT AppError IO`. Exceções de banco são capturadas num único ponto (`capturarInfra`) e
+  traduzidas pelo SQLSTATE (UNIQUE → `Conflito`, FK/CHECK → `ErroDeValidacao`, resto → `FalhaDeInfra`,
+  cujo detalhe só vai para o log). Usado na criação/edição/exclusão de matrículas e no cadastro.
+* **Testes unitários** (`Test/Main.hs`): domínio, CPS, lazy, `AppError`/`AppM`, Reader, bcrypt e AES.
+* **Testes de integração** (`Test/Integration.hs`): PostgreSQL real, com schema e fixtures; cobrem CRUD,
+  restrições UNIQUE/FK/CHECK, cascata, relatórios sobre dados gravados e senha/CPF persistidos.
+* **Teste de stress** (`scripts/stress.sh`): `wrk` contra páginas públicas, listagem e dashboard
+  autenticado; resultados em `docs/stress/`.
+* **Arquitetura e decisões:** [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md).
+
+```bash
+nix flake check --impure -L   # unitários + integração
+./scripts/stress.sh           # stress (com o app rodando via ./start)
+```
+
 ## Equipe
 
 * João Pedro de Almeida Floriano - 2420377
