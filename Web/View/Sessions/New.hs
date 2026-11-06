@@ -9,8 +9,8 @@ instance View (NewView User) where
                 <div class="card shadow-sm">
                     <div class="card-body p-4">
                         <div class="sga-auth-head">
-                            <span class="sga-auth-mark">SGA</span>
-                            <h1 class="h4 mb-1">Entrar no SGA-Func</h1>
+                            <span class="sga-auth-mark">SC</span>
+                            <h1 class="h4 mb-1">Entrar no schoolControl</h1>
                             <p class="sga-auth-sub mb-0">Acesse o painel de gestão acadêmica</p>
                         </div>
                         {renderForm user}

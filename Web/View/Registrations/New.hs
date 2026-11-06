@@ -14,8 +14,8 @@ instance View NewView where
                 <div class="card shadow-sm">
                     <div class="card-body p-4">
                         <div class="sga-auth-head">
-                            <span class="sga-auth-mark">SGA</span>
-                            <h1 class="h4 mb-1">Criar conta no SGA-Func</h1>
+                            <span class="sga-auth-mark">SC</span>
+                            <h1 class="h4 mb-1">Criar conta no schoolControl</h1>
                             <p class="sga-auth-sub mb-0">Crie sua conta de aluno em segundos</p>
                         </div>
                         {renderForm nome email}
