@@ -18,7 +18,7 @@ defaultLayout inner = [hsx|
         {stylesheets}
         {scripts}
 
-        <title>{pageTitleOrDefault "SGA-Func"}</title>
+        <title>{pageTitleOrDefault "schoolControl"}</title>
     </head>
     <body>
         {navbar}
@@ -36,8 +36,8 @@ navbar = [hsx|
     <nav class="navbar navbar-expand sga-navbar">
         <div class="container">
             <a class="navbar-brand" href="/">
-                <span class="sga-brand-mark">SGA</span>
-                <span>SGA-Func</span>
+                <span class="sga-brand-mark">SC</span>
+                <span>schoolControl</span>
             </a>
             <div class="navbar-nav me-auto">
                 {forEach recursos linkDoMenu}

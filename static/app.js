@@ -12,11 +12,11 @@ function espelharFlashNoConsole() {
             return;
         }
         if (elemento.classList.contains('alert-danger')) {
-            console.error('[SGA-Func] ' + mensagem);
+            console.error('[schoolControl] ' + mensagem);
         } else if (elemento.classList.contains('alert-warning')) {
-            console.warn('[SGA-Func] ' + mensagem);
+            console.warn('[schoolControl] ' + mensagem);
         } else {
-            console.info('[SGA-Func] ' + mensagem);
+            console.info('[schoolControl] ' + mensagem);
         }
     });
 }
