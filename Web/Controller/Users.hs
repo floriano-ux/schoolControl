@@ -26,15 +26,15 @@ instance Controller UsersController where
         render NewView { .. }
 
     action CreateUserAction = do
+        config <- carregarAuthConfig
         let user = newRecord @User
         user
             |> buildUser
-            |> validateField #passwordHash (hasMinLength 6 |> withCustomErrorMessage "A senha precisa ter pelo menos 6 caracteres")
+            |> validateField #passwordHash (viaSenha config)
             |> validarEmailDeUsuarioUnico
             >>= ifValid \case
                 Left user -> render NewView { user = user |> set #passwordHash "" }
                 Right user -> do
-                    config <- carregarAuthConfig
                     resultado <- tentar "usuarios" do
                         hashed <- gerarHashSenha config user.passwordHash
                         documento <- cifrarOpcional config (param @Text "document")
@@ -61,17 +61,17 @@ instance Controller UsersController where
             }
 
     action UpdateUserAction { userId } = do
+        config <- carregarAuthConfig
         user <- fetch userId
         let hashAtual = user.passwordHash
         let docAtual  = user.document
         user
             |> buildUser
-            |> validateField #passwordHash senhaOpcional
+            |> validateField #passwordHash (senhaOpcional config)
             |> validarEmailDeUsuarioUnico
             >>= ifValid \case
                 Left user -> render EditView { user = user |> set #passwordHash "", documento = "" }
                 Right user -> do
-                    config <- carregarAuthConfig
                     resultado <- tentar "usuarios" do
                         novoHash <- if Text.null user.passwordHash
                             then pure hashAtual
@@ -107,10 +107,10 @@ buildUser user = user
     |> validateField #name (nonEmpty |> withCustomErrorMessage "Informe o nome")
     |> validateField #email (isEmail |> withCustomErrorMessage "Informe um e-mail válido")
 
-senhaOpcional :: Text -> ValidatorResult
-senhaOpcional senha
+senhaOpcional :: AuthConfig -> Text -> ValidatorResult
+senhaOpcional config senha
     | Text.null senha = Success
-    | otherwise       = senha |> (hasMinLength 6 |> withCustomErrorMessage "A senha precisa ter pelo menos 6 caracteres")
+    | otherwise       = viaSenha config senha
 
 validarEmailDeUsuarioUnico user = user
     |> withCustomErrorMessageIO "Este e-mail já está em uso" validateIsUnique #email

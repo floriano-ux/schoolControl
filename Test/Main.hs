@@ -5,6 +5,9 @@ import IHP.Prelude
 import IHP.ModelSupport (newRecord)
 import Generated.Types
 import Application.Domain
+import Application.Security
+import Application.Security.GeradorSenha
+import qualified Data.Text as Text
 import System.IO (hSetEncoding, stdout, stderr, utf8)
 
 -- Monta nota sem tocar no banco TESTEEES
@@ -300,3 +303,34 @@ specs = do
                 `shouldBe` "ana2@unifor.br"
         it "devolve o próprio e-mail quando ele já está livre" do
             primeiroEmailLivre ["outro@unifor.br"] "ana@unifor.br" `shouldBe` "ana@unifor.br"
+
+    describe "validarForcaSenha (política de senha)" do
+        it "exige ao menos uma letra maiúscula" do
+            avaliarForcaSenha configPadrao "abcdefg1" `shouldBe` Left SenhaSemMaiuscula
+        it "aceita senha com maiúscula, minúscula e número" do
+            avaliarForcaSenha configPadrao "Abcdefg1" `shouldBe` Right ()
+        it "mantém as regras de tamanho e de número" do
+            avaliarForcaSenha configPadrao "Abc1" `shouldBe` Left (SenhaMuitoCurta 8)
+            avaliarForcaSenha configPadrao "Abcdefgh" `shouldBe` Left SenhaSemNumero
+
+    describe "montarSenha (gerador de senha puro)" do
+        let fontes =
+                [ take 200 (cycle [0 .. 255])
+                , replicate 200 7
+                , take 200 (cycle [255, 254 .. 0])
+                , take 200 (cycle [13, 101, 200, 3, 77])
+                ]
+        it "gera senhas que respeitam a política de senha" do
+            forM_ fontes \bytes -> do
+                let resultado = montarSenha 12 bytes
+                resultado `shouldSatisfy` isJust
+                forM_ resultado \senha -> do
+                    avaliarForcaSenha configPadrao senha `shouldBe` Right ()
+                    Text.length senha `shouldSatisfy` (>= 8)
+        it "devolve Nothing quando os bytes não são suficientes" do
+            montarSenha 12 [1, 2, 3] `shouldBe` Nothing
+            montarSenha 12 [] `shouldBe` Nothing
+        it "descarta bytes que causariam viés (amostragem por rejeição)" do
+            montarSenha 12 (replicate 200 255) `shouldBe` Nothing
+        it "usa o tamanho mínimo de 12 caracteres para senhas geradas" do
+            tamanhoSenhaGerada configPadrao `shouldBe` 12

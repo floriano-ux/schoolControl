@@ -1,5 +1,6 @@
 module Application.Helper.Controller
     ( viaDominio
+    , viaSenha
     , exigirPermissao
     , opcoesDeMatricula
     , tentar
@@ -12,6 +13,7 @@ import Generated.Types
 import Web.Types
 import Web.Routes ()
 import Application.Domain
+import Application.Security (AuthConfig, avaliarForcaSenha, mensagemDaSenha)
 import Control.Exception (try, SomeException, displayException)
 import qualified Data.Text.IO as Text.IO
 import System.IO (stderr)
@@ -24,6 +26,11 @@ viaDominio :: (valor -> Either ErroValidacao valor) -> valor -> ValidatorResult
 viaDominio validar valor = case validar valor of
     Right _   -> Success
     Left erro -> Failure (mensagemDeErro erro)
+
+viaSenha :: AuthConfig -> Text -> ValidatorResult
+viaSenha config senha = case avaliarForcaSenha config senha of
+    Right ()  -> Success
+    Left erro -> Failure (mensagemDaSenha erro)
 
 -- Garante que há um usuário logado e que o papel dele permite a operação.
 -- Sem login: redireciona para a tela de login (e volta para cá depois de entrar).
