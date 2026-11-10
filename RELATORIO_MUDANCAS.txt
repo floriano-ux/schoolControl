@@ -223,7 +223,11 @@ Modelo de dados atual:
     concluída. Na edição só o status muda.
   - Notas: uma linha de notas por matrícula. O sistema calcula AV1, AV2, AV3,
     a NF, a situação e o conceito.
-  - Relatórios (dashboard): KPIs, médias por curso e por disciplina, matrículas
+  - Meu boletim (só aluno, /MeuBoletim): disciplinas em que o aluno está
+    matriculado, com curso, status, AV1, AV2, AV3, NF e situação, além de
+    "Disciplinas em curso" e "Média geral". Mostra apenas os dados do aluno
+    logado.
+  - Relatórios (dashboard da equipe): KPIs, médias por curso e por disciplina, matrículas
     ativas por curso, situação dos alunos, ranking e alunos por curso. Há filtros
     por curso, disciplina e status. A página atualiza em tempo real com
     autoRefresh. O ranking e os nomes de alunos só aparecem para quem pode ver
@@ -303,8 +307,19 @@ Modelo de dados atual:
   Disciplinas  |   G   |      G      |     V     |   V
   Matrículas   |   G   |      G      |     V     |   -
   Notas        |   G   |      V      |     G     |   -
-  Relatórios   |   V   |      V      |     V     |   V
+  Relatórios   |   V   |      V      |     V     |   -
+  Meu boletim  |   -   |      -      |     -     |   V
   Usuários     |   G   |      -      |     -     |   -
+  - O menu superior e os atalhos da página inicial mostram só as áreas que o
+    papel pode ver:
+      Aluno:        Cursos, Disciplinas, Meu boletim
+      Professor:    Estudantes, Cursos, Disciplinas, Matrículas, Notas, Relatórios
+      Coordenador:  Estudantes, Cursos, Disciplinas, Matrículas, Notas, Relatórios
+      Admin:        tudo acima (menos Meu boletim) e Usuários
+  - O aluno não vê o dashboard de Relatórios, porque ele traz dados de toda a
+    instituição (total de alunos, aprovação e médias de todos).
+  - Nas listagens, as colunas e os links de Editar/Excluir e o botão "+ Novo"
+    só aparecem para quem pode gerenciar aquele recurso.
   - Sem login, o usuário vai para a tela de login e volta para a página que
     tentou abrir. Sem permissão, volta para "/" com uma mensagem.
   - O admin não pode excluir a própria conta.
@@ -383,3 +398,30 @@ Modelo de dados atual:
     recarregada, o navegador oferece reenviar o formulário. Num cadastro, o
     reenvio esbarra em "e-mail já cadastrado". Em "Gerar nova senha", o reenvio
     gera outra senha.
+
+
+==========================================================================
+9. AJUSTES POR PAPEL E CONTAS DE TESTE (segunda rodada)
+==========================================================================
+
+  - Novo recurso Boletim no domínio (Permissoes.hs). Só o aluno tem acesso,
+    e o aluno perdeu o acesso a Relatórios.
+  - Novas funções puras boletimDoAluno e mediaGeral (Relatorios.hs).
+  - Novo BoletimController (GET /MeuBoletim) e a view Boletim/Index.hs. A
+    página consulta somente as matrículas do usuário logado.
+  - Listagens de Estudantes, Cursos, Disciplinas, Matrículas e Notas:
+    as colunas de ação só são renderizadas para quem pode gerenciar
+    (helpers colunasDeAcao e celulasDeAcao).
+  - Testes: 85 exemplos, 0 falhas (menu de cada papel, boletim e média geral).
+
+  Contas de teste (Application/Fixtures.sql, inserção idempotente):
+    Papel      Nome      E-mail                        Senha
+    ---------  --------  ----------------------------  -----------
+    Aluno      Floriano  floriano@schoolcontrol.dev    Floriano123
+    Professor  Ruan      ruan@schoolcontrol.dev        Ruan12345
+    Admin      Nicolly   nicolly@schoolcontrol.dev     Nicolly123
+
+  O Fixtures.sql só é carregado quando o banco é criado do zero. Num banco que
+  já existe, rode apenas o bloco "Contas de teste" do Fixtures.sql no psql.
+  O bloco usa ON CONFLICT (email) DO NOTHING, então pode ser rodado mais de
+  uma vez.
