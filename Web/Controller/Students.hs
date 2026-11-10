@@ -17,7 +17,12 @@ instance Controller StudentsController where
     action StudentsAction = do
         todos      <- query @User |> filterWhere (#userRole, Aluno) |> orderBy #name |> fetch
         matriculas <- matriculasVisiveisPara currentUser
-        let students = alunosVisiveis currentUser matriculas todos
+        subjects   <- query @Subject |> fetch
+        courses    <- query @Course |> fetch
+        let disciplinas  = sortOn rotuloDaDisciplina (disciplinasComCurso courses (disciplinasVisiveis currentUser subjects))
+            disciplinaId = paramOrNothing @(Id Subject) "subjectId"
+                >>= \sid -> (\(s, _) -> s.id) <$> find (\(s, _) -> s.id == sid) disciplinas
+            linhas = alunosComDisciplinas disciplinaId matriculas (alunosVisiveis currentUser matriculas todos)
         render IndexView { .. }
 
     action NewStudentAction = do
