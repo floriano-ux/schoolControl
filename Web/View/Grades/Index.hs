@@ -29,8 +29,7 @@ instance View IndexView where
                             <th>Situação</th>
                             <th>Conceito</th>
                             <th></th>
-                            <th></th>
-                            <th></th>
+                            {when (pode Gerenciar Notas) colunasDeAcao}
                         </tr>
                     </thead>
                     <tbody>{forEach linhas renderLinha}</tbody>
@@ -62,8 +61,7 @@ instance View IndexView where
                     <td>{badgeSituacao (situacaoDaMatricula m.matricula.status grade)}</td>
                     <td>{show (classificarMedia (mediaFinal grade))}</td>
                     <td><a href={ShowGradeAction grade.id}>Ver</a></td>
-                    <td>{when (pode Gerenciar Notas) (editar grade)}</td>
-                    <td>{when (pode Gerenciar Notas) (linkExcluir (pathTo (DeleteGradeAction grade.id)))}</td>
+                    {when (pode Gerenciar Notas) (celulasDeAcao (editar grade) (linkExcluir (pathTo (DeleteGradeAction grade.id))))}
                 </tr>
             |]
 

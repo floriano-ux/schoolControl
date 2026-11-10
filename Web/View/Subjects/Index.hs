@@ -20,8 +20,7 @@ instance View IndexView where
                             <th>Curso</th>
                             <th>Carga horária</th>
                             <th></th>
-                            <th></th>
-                            <th></th>
+                            {when (pode Gerenciar Disciplinas) colunasDeAcao}
                         </tr>
                     </thead>
                     <tbody>{forEach linhas renderLinha}</tbody>
@@ -43,8 +42,7 @@ instance View IndexView where
                     <td>{course.name}</td>
                     <td>{subject.workload} h</td>
                     <td><a href={ShowSubjectAction subject.id}>Ver</a></td>
-                    <td>{when (pode Gerenciar Disciplinas) (editar subject)}</td>
-                    <td>{when (pode Gerenciar Disciplinas) (linkExcluir (pathTo (DeleteSubjectAction subject.id)))}</td>
+                    {when (pode Gerenciar Disciplinas) (celulasDeAcao (editar subject) (linkExcluir (pathTo (DeleteSubjectAction subject.id))))}
                 </tr>
             |]
 

@@ -5,6 +5,8 @@ module Application.Helper.View
     , formatarMedia
     , linkExcluir
     , cabecalhoPagina
+    , colunasDeAcao
+    , celulasDeAcao
     , badgeStatus
     , badgeSituacao
     ) where
@@ -41,6 +43,13 @@ linkExcluir :: Text -> Html
 linkExcluir caminho = [hsx|
     <a href={caminho} class="js-delete text-danger" data-confirm="Tem certeza que deseja excluir?">Excluir</a>
 |]
+
+-- Cabeçalhos das colunas Editar/Excluir, exibidos só para quem pode gerenciar.
+colunasDeAcao :: Html
+colunasDeAcao = [hsx|<th></th><th></th>|]
+
+celulasDeAcao :: Html -> Html -> Html
+celulasDeAcao editar excluir = [hsx|<td>{editar}</td><td>{excluir}</td>|]
 
 -- Cabeçalho de página: título à esquerda e uma ação opcional (ex.: botão "+ Novo") à direita.
 cabecalhoPagina :: Text -> Html -> Html

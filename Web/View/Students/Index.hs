@@ -16,8 +16,7 @@ instance View IndexView where
                             <th>Nome</th>
                             <th>E-mail</th>
                             <th></th>
-                            <th></th>
-                            <th></th>
+                            {when (pode Gerenciar Estudantes) colunasDeAcao}
                         </tr>
                     </thead>
                     <tbody>{forEach students renderStudent}</tbody>
@@ -37,8 +36,7 @@ renderStudent student = [hsx|
         <td>{student.name}</td>
         <td>{student.email}</td>
         <td><a href={ShowStudentAction student.id}>Ver</a></td>
-        <td>{when (pode Gerenciar Estudantes) editar}</td>
-        <td>{when (pode Gerenciar Estudantes) (linkExcluir (pathTo (DeleteStudentAction student.id)))}</td>
+        {when (pode Gerenciar Estudantes) (celulasDeAcao editar (linkExcluir (pathTo (DeleteStudentAction student.id))))}
     </tr>
 |]
     where

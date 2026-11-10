@@ -18,8 +18,7 @@ instance View IndexView where
                             <th>Curso</th>
                             <th>Status</th>
                             <th></th>
-                            <th></th>
-                            <th></th>
+                            {when (pode Gerenciar Matriculas) colunasDeAcao}
                         </tr>
                     </thead>
                     <tbody>{forEach linhas renderLinha}</tbody>
@@ -42,8 +41,7 @@ instance View IndexView where
                     <td>{m.curso.name}</td>
                     <td>{badgeStatus m.matricula.status}</td>
                     <td><a href={ShowEnrollmentAction m.matricula.id}>Ver</a></td>
-                    <td>{when (pode Gerenciar Matriculas) (editar m.matricula)}</td>
-                    <td>{when (pode Gerenciar Matriculas) (linkExcluir (pathTo (DeleteEnrollmentAction m.matricula.id)))}</td>
+                    {when (pode Gerenciar Matriculas) (celulasDeAcao (editar m.matricula) (linkExcluir (pathTo (DeleteEnrollmentAction m.matricula.id))))}
                 </tr>
             |]
 
