@@ -14,7 +14,8 @@ CREATE TABLE subjects (
     course_id UUID NOT NULL,
     name TEXT NOT NULL,
     workload INT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+    professor_id UUID DEFAULT NULL
 );
 
 CREATE TABLE enrollments (
@@ -54,11 +55,13 @@ CREATE TABLE users (
 CREATE INDEX enrollments_student_id_index ON enrollments (student_id);
 CREATE INDEX enrollments_subject_id_index ON enrollments (subject_id);
 CREATE INDEX subjects_course_id_index ON subjects (course_id);
+CREATE INDEX subjects_professor_id_index ON subjects (professor_id);
 CREATE INDEX grades_enrollment_id_index ON grades (enrollment_id);
 
 ALTER TABLE enrollments ADD CONSTRAINT enrollments_ref_student_id FOREIGN KEY (student_id) REFERENCES users (id) ON DELETE CASCADE;
 ALTER TABLE enrollments ADD CONSTRAINT enrollments_ref_subject_id FOREIGN KEY (subject_id) REFERENCES subjects (id) ON DELETE CASCADE;
 ALTER TABLE subjects ADD CONSTRAINT subjects_ref_course_id FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE;
+ALTER TABLE subjects ADD CONSTRAINT subjects_ref_professor_id FOREIGN KEY (professor_id) REFERENCES users (id) ON DELETE SET NULL;
 ALTER TABLE grades ADD CONSTRAINT grades_ref_enrollment_id FOREIGN KEY (enrollment_id) REFERENCES enrollments (id) ON DELETE CASCADE;
 
 -- Restrições de integridade (Sprint 2)
