@@ -3,12 +3,14 @@ import Web.View.Prelude
 
 data IndexView = IndexView
     { medias           :: [(Text, Maybe Double)]
+    , mediasDisciplina :: [(Text, Maybe Double)]
     , ranking          :: [(Int, Text, Double)]
-    , alunos           :: [(Text, [Text])]
+    , alunosNoCurso    :: [(Text, [Text])]
     , ativas           :: [(Text, Int)]
     , situacoes        :: [(Situacao, Int)]
     , cargaTotal       :: Int
     , courses          :: [Course]
+    , disciplinas      :: [(Subject, Course)]
     , filtro           :: FiltroRelatorio
     , totalAlunos      :: Int
     , matriculasAtivas :: Int
@@ -76,14 +78,21 @@ instance View IndexView where
         <div class="card mb-4">
             <div class="card-body">
                 <form method="GET" action={ReportsAction} class="row g-3 align-items-end">
-                    <div class="col-md-5">
+                    <div class="col-md-3">
                         <label class="form-label" for="filtroCurso">Curso</label>
                         <select id="filtroCurso" name="courseId" class="form-select">
                             {renderTodosCursos}
                             {forEach courses renderOpcaoCurso}
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
+                        <label class="form-label" for="filtroDisciplina">Disciplina</label>
+                        <select id="filtroDisciplina" name="subjectId" class="form-select">
+                            {renderTodasDisciplinas}
+                            {forEach disciplinas renderOpcaoDisciplina}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
                         <label class="form-label" for="filtroStatus">Status da matrícula</label>
                         <select id="filtroStatus" name="status" class="form-select">
                             {renderTodosStatus}
@@ -94,7 +103,7 @@ instance View IndexView where
                         <button type="submit" class="btn btn-primary flex-fill">
                             Filtrar
                         </button>
-                        {when filtroAtivo linkLimpar}
+                        {when (filtroAtivo filtro) linkLimpar}
                     </div>
                 </form>
             </div>
@@ -110,6 +119,16 @@ instance View IndexView where
                         <tbody>{forEach medias renderMedia}</tbody>
                     </table>
                     <div class="card-footer text-muted small">Carga horária total dos cursos: {cargaTotal} h</div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header">Média final por disciplina</div>
+                    <table class="table mb-0">
+                        <thead><tr><th>Disciplina</th><th class="text-end">Média (NF)</th></tr></thead>
+                        <tbody>{forEach mediasDisciplina renderMedia}</tbody>
+                    </table>
                 </div>
             </div>
 
@@ -133,7 +152,7 @@ instance View IndexView where
             </div>
 
             {when (pode Visualizar Estudantes) (rankingCard ranking)}
-            {when (pode Visualizar Estudantes) (alunosCard alunos)}
+            {when (pode Visualizar Estudantes) (alunosCard alunosNoCurso)}
         </div>
     |]
         where
@@ -141,7 +160,7 @@ instance View IndexView where
 
             subtextoAlunos :: Text
             subtextoAlunos
-                | filtroAtivo = "no recorte filtrado"
+                | filtroAtivo filtro = "no recorte filtrado"
                 | otherwise   = "cadastrados no sistema"
 
             formatarTaxa :: Maybe Double -> Text
@@ -158,6 +177,16 @@ instance View IndexView where
                     then [hsx|<option value={tshow course.id} selected="selected">{course.name}</option>|]
                     else [hsx|<option value={tshow course.id}>{course.name}</option>|]
 
+            renderTodasDisciplinas =
+                if isNothing filtro.disciplinaId
+                    then [hsx|<option value="" selected="selected">Todas as disciplinas</option>|]
+                    else [hsx|<option value="">Todas as disciplinas</option>|]
+
+            renderOpcaoDisciplina par@(subject, _) =
+                if filtro.disciplinaId == Just subject.id
+                    then [hsx|<option value={tshow subject.id} selected="selected">{rotuloDaDisciplina par}</option>|]
+                    else [hsx|<option value={tshow subject.id}>{rotuloDaDisciplina par}</option>|]
+
             renderTodosStatus =
                 if isNothing filtro.status
                     then [hsx|<option value="" selected="selected">Todos os status</option>|]
@@ -169,12 +198,11 @@ instance View IndexView where
                     else [hsx|<option value={inputValue st}>{nomeDoStatus st}</option>|]
 
             statuses = [minBound .. maxBound] :: [EnrollmentStatus]
-            filtroAtivo = isJust filtro.cursoId || isJust filtro.status
             linkLimpar = [hsx|<a href={ReportsAction} class="btn btn-outline-secondary">Limpar</a>|]
 
 renderMedia :: (Text, Maybe Double) -> Html
-renderMedia (curso, media) = [hsx|
-    <tr><td>{curso}</td><td class="text-end">{formatarMedia media}</td></tr>
+renderMedia (rotulo, media) = [hsx|
+    <tr><td>{rotulo}</td><td class="text-end">{formatarMedia media}</td></tr>
 |]
 
 renderAtivas :: (Text, Int) -> Html
@@ -206,11 +234,11 @@ rankingCard ranking = [hsx|
         |]
 
 alunosCard :: [(Text, [Text])] -> Html
-alunosCard alunos = [hsx|
+alunosCard alunosNoCurso = [hsx|
     <div class="col-12">
         <div class="card">
             <div class="card-header">Alunos por curso <small class="text-muted">(sem matrículas trancadas)</small></div>
-            <ul class="list-group list-group-flush">{forEach alunos renderCurso}</ul>
+            <ul class="list-group list-group-flush">{forEach alunosNoCurso renderCurso}</ul>
         </div>
     </div>
 |]

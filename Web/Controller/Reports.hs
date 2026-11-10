@@ -7,33 +7,37 @@ instance Controller ReportsController where
     beforeAction = exigirPermissao Visualizar Relatorios
 
     -- Busca as tabelas uma vez e monta todos os relatórios com as funções puras do domínio.
-    -- 'autoRefresh' ativa a reatividade nativa do IHP: monitora as tabelas consultadas
-    -- (Student, Course, Enrollment, Grade) e envia diffs DOM via WebSocket (morphdom)
-    -- sempre que o banco de dados mudar, sem necessidade de JS ou Miso/Obelisk.
+    -- 'autoRefresh' reenvia a página (diff via WebSocket) sempre que as tabelas consultadas mudarem.
     action ReportsAction = autoRefresh do
-        students    <- query @Student |> fetch
+        users       <- query @User |> fetch
+        subjects    <- query @Subject |> orderBy #name |> fetch
         courses     <- query @Course |> orderBy #name |> fetch
         enrollments <- query @Enrollment |> fetch
         grades      <- query @Grade |> fetch
 
         let filtro = FiltroRelatorio
-                { cursoId = paramOrNothing @(Id Course) "courseId"
-                , status  = paramOrNothing @EnrollmentStatus "status"
-                            <|> (paramOrNothing @Text "status" >>= parseStatus)
+                { cursoId      = paramOrNothing @(Id Course) "courseId"
+                , disciplinaId = paramOrNothing @(Id Subject) "subjectId"
+                , status       = paramOrNothing @EnrollmentStatus "status"
+                                 <|> (paramOrNothing @Text "status" >>= parseStatus)
                 }
 
-            matriculasFiltradas = aplicarFiltro filtro enrollments
-            cursosFiltrados     = filtrarCursos filtro.cursoId courses
-            linhasBoletim       = boletim students matriculasFiltradas grades
+            matriculas           = detalharMatriculas users subjects courses enrollments
+            disciplinas          = sortOn rotuloDaDisciplina (disciplinasComCurso courses subjects)
+            matriculasFiltradas  = aplicarFiltro filtro matriculas
+            cursosFiltrados      = filtrarCursos filtro.cursoId courses
+            disciplinasFiltradas = filtrarDisciplinas filtro disciplinas
+            linhasBoletim        = boletim matriculasFiltradas grades
 
-            medias      = mediaPorCurso cursosFiltrados matriculasFiltradas grades
-            ranking     = rankingDeAlunos students matriculasFiltradas grades
-            alunos      = alunosPorCurso cursosFiltrados students matriculasFiltradas
-            ativas      = matriculasAtivasPorCurso cursosFiltrados matriculasFiltradas
-            situacoes   = contarPorSituacao linhasBoletim
-            cargaTotal  = cargaHorariaTotal cursosFiltrados
+            medias           = mediaPorCurso cursosFiltrados matriculasFiltradas grades
+            mediasDisciplina = mediaPorDisciplina disciplinasFiltradas matriculasFiltradas grades
+            ranking          = rankingDeAlunos matriculasFiltradas grades
+            alunosNoCurso    = alunosPorCurso cursosFiltrados matriculasFiltradas
+            ativas           = matriculasAtivasPorCurso cursosFiltrados matriculasFiltradas
+            situacoes        = contarPorSituacao linhasBoletim
+            cargaTotal       = cargaHorariaTotal cursosFiltrados
 
-            totalAlunos      = totalAlunosFiltrados filtro students matriculasFiltradas
+            totalAlunos      = totalAlunosFiltrados filtro (alunos users) matriculasFiltradas
             matriculasAtivas = totalMatriculasAtivas matriculasFiltradas
             taxaAprov        = taxaAprovacao linhasBoletim
 

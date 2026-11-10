@@ -31,6 +31,16 @@ data CoursesController
     | DeleteCourseAction { courseId :: !(Id Course) }
     deriving (Eq, Show, Data)
 
+data SubjectsController
+    = SubjectsAction
+    | NewSubjectAction
+    | ShowSubjectAction { subjectId :: !(Id Subject) }
+    | CreateSubjectAction
+    | EditSubjectAction { subjectId :: !(Id Subject) }
+    | UpdateSubjectAction { subjectId :: !(Id Subject) }
+    | DeleteSubjectAction { subjectId :: !(Id Subject) }
+    deriving (Eq, Show, Data)
+
 data EnrollmentsController
     = EnrollmentsAction
     | NewEnrollmentAction
@@ -78,7 +88,7 @@ data RegistrationsController
     deriving (Eq, Show, Data)
 
 
--- Item do select de matrículas na tela de Notas ("Aluno — Curso (status)").
+-- Item do select de matrículas na tela de Notas ("Aluno — Disciplina / Curso (status)").
 data OpcaoMatricula = OpcaoMatricula
     { matriculaId :: !(Id Enrollment)
     , rotulo      :: !Text

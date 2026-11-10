@@ -10,41 +10,39 @@ instance Controller EnrollmentsController where
     beforeAction = exigirPermissao Visualizar Matriculas
 
     action EnrollmentsAction = do
-        enrollments <- query @Enrollment |> fetch
-        students    <- query @Student |> orderBy #name |> fetch
-        courses     <- query @Course |> orderBy #name |> fetch
+        matriculas <- carregarMatriculasDetalhadas
         render IndexView { .. }
 
     action ShowEnrollmentAction { enrollmentId } = do
-        enrollment <- fetch enrollmentId
-        student    <- fetch enrollment.studentId
-        course     <- fetch enrollment.courseId
+        detalhe <- buscarMatriculaDetalhada enrollmentId
         render ShowView { .. }
 
     action NewEnrollmentAction = do
         exigirPermissao Gerenciar Matriculas
         let enrollment = newRecord @Enrollment
-        students <- query @Student |> orderBy #name |> fetch
-        courses  <- query @Course |> orderBy #name |> fetch
+        students    <- buscarAlunos
+        disciplinas <- buscarDisciplinasComCurso
         render NewView { .. }
 
     action CreateEnrollmentAction = do
         exigirPermissao Gerenciar Matriculas
-        students            <- query @Student |> orderBy #name |> fetch
-        courses             <- query @Course |> orderBy #name |> fetch
-        existingEnrollments <- query @Enrollment |> fetch
+        users       <- query @User |> fetch
+        subjects    <- query @Subject |> fetch
+        existentes  <- query @Enrollment |> fetch
+        students    <- buscarAlunos
+        disciplinas <- buscarDisciplinasComCurso
 
         let enrollment = newRecord @Enrollment
-                |> fill @'["studentId", "courseId", "status"]
+                |> fill @'["studentId", "subjectId", "status"]
 
-        -- Encadeia a validação em CPS (aluno -> curso -> duplicidade).
-        pipelineMatriculaCPS enrollment students courses existingEnrollments
+        pipelineMatriculaCPS enrollment users subjects existentes
             (\erro -> do
-                let enrollmentComErro = case erro of
-                        AlunoNaoEncontrado -> enrollment |> attachFailure #studentId (mensagemErroMatricula erro)
-                        CursoNaoEncontrado -> enrollment |> attachFailure #courseId (mensagemErroMatricula erro)
-                        MatriculaDuplicada -> enrollment |> attachFailure #courseId (mensagemErroMatricula erro)
-                render NewView { enrollment = enrollmentComErro, students, courses }
+                let campo = case erro of
+                        AlunoNaoEncontrado      -> attachFailure #studentId
+                        UsuarioNaoEhAluno       -> attachFailure #studentId
+                        DisciplinaNaoEncontrada -> attachFailure #subjectId
+                        MatriculaDuplicada      -> attachFailure #subjectId
+                render NewView { enrollment = enrollment |> campo (mensagemErroMatricula erro), students, disciplinas }
             )
             (\matriculaValida -> do
                 matriculaValida |> createRecord
@@ -54,12 +52,10 @@ instance Controller EnrollmentsController where
 
     action EditEnrollmentAction { enrollmentId } = do
         exigirPermissao Gerenciar Matriculas
-        enrollment <- fetch enrollmentId
-        student    <- fetch enrollment.studentId
-        course     <- fetch enrollment.courseId
+        detalhe <- buscarMatriculaDetalhada enrollmentId
         render EditView { .. }
 
-    -- Na edição só o status muda (aluno e curso definem a matrícula).
+    -- Na edição só o status muda (aluno e disciplina definem a matrícula).
     action UpdateEnrollmentAction { enrollmentId } = do
         exigirPermissao Gerenciar Matriculas
         enrollment <- fetch enrollmentId
@@ -75,3 +71,12 @@ instance Controller EnrollmentsController where
         deleteRecord enrollment
         setSuccessMessage "Matrícula excluída"
         redirectTo EnrollmentsAction
+
+buscarAlunos :: (?modelContext :: ModelContext) => IO [User]
+buscarAlunos = query @User |> filterWhere (#userRole, Aluno) |> orderBy #name |> fetch
+
+buscarDisciplinasComCurso :: (?modelContext :: ModelContext) => IO [(Subject, Course)]
+buscarDisciplinasComCurso = do
+    subjects <- query @Subject |> orderBy #name |> fetch
+    courses  <- query @Course |> fetch
+    pure (sortOn rotuloDaDisciplina (disciplinasComCurso courses subjects))

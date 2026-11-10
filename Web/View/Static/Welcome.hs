@@ -33,7 +33,8 @@ visitante = [hsx|
         vitrine =
             [ ("🎓", "Estudantes", "Cadastro e acompanhamento dos alunos")
             , ("📚", "Cursos", "Cursos com carga horária")
-            , ("🧾", "Matrículas", "Vínculo de alunos aos cursos")
+            , ("📖", "Disciplinas", "Disciplinas que compõem cada curso")
+            , ("🧾", "Matrículas", "Vínculo de alunos às disciplinas")
             , ("📝", "Notas", "Lançamento de PE/AVf e situação final")
             , ("📊", "Relatórios", "Médias, ranking e alunos por curso")
             ]
@@ -81,7 +82,8 @@ atalho recurso = [hsx|
         (icone, titulo, descricao, destino) = case recurso of
             Estudantes -> ("🎓", "Estudantes", "Cadastro de alunos", pathTo StudentsAction)
             Cursos     -> ("📚", "Cursos", "Cursos e carga horária", pathTo CoursesAction)
-            Matriculas -> ("🧾", "Matrículas", "Alunos matriculados em cada curso", pathTo EnrollmentsAction)
+            Disciplinas -> ("📖", "Disciplinas", "Disciplinas de cada curso", pathTo SubjectsAction)
+            Matriculas -> ("🧾", "Matrículas", "Alunos matriculados em cada disciplina", pathTo EnrollmentsAction)
             Notas      -> ("📝", "Notas", "Lançamento de PE/AVf e situação final", pathTo GradesAction)
             Relatorios -> ("📊", "Relatórios", "Médias, ranking e alunos por curso", pathTo ReportsAction)
             Usuarios   -> ("👥", "Usuários", "Contas de acesso e papéis", pathTo UsersAction)

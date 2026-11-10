@@ -1,21 +1,18 @@
 module Web.View.Enrollments.Edit where
 import Web.View.Prelude
 
-data EditView = EditView
-    { enrollment :: Enrollment
-    , student    :: Student
-    , course     :: Course
-    }
+data EditView = EditView { detalhe :: MatriculaDetalhada }
 
 instance View EditView where
     html EditView { .. } = [hsx|
         {breadcrumb}
         <h1>Editar matrícula</h1>
         <dl>
-            <dt>Aluno</dt><dd>{student.name}</dd>
-            <dt>Curso</dt><dd>{course.name}</dd>
+            <dt>Aluno</dt><dd>{detalhe.aluno.name}</dd>
+            <dt>Disciplina</dt><dd>{detalhe.disciplina.name}</dd>
+            <dt>Curso</dt><dd>{detalhe.curso.name}</dd>
         </dl>
-        {renderForm enrollment}
+        {renderForm detalhe.matricula}
     |]
         where
             breadcrumb = renderBreadcrumb

@@ -2,10 +2,8 @@ module Web.View.Grades.Index where
 import Web.View.Prelude
 
 data IndexView = IndexView
-    { grades      :: [Grade]
-    , enrollments :: [Enrollment]
-    , students    :: [Student]
-    , courses     :: [Course]
+    { grades     :: [Grade]
+    , matriculas :: [MatriculaDetalhada]
     }
 
 instance View IndexView where
@@ -22,6 +20,7 @@ instance View IndexView where
                     <thead>
                         <tr>
                             <th>Aluno</th>
+                            <th>Disciplina</th>
                             <th>Curso</th>
                             <th class="text-end">AV1</th>
                             <th class="text-end">AV2</th>
@@ -46,24 +45,21 @@ instance View IndexView where
             lancarNotas = [hsx|<a href={pathTo NewGradeAction} class="btn btn-primary">+ Lançar notas</a>|]
 
             -- Junta cada nota com a sua matrícula (mapMaybe descarta notas órfãs)
-            linhas = sortOn (\(aluno, curso, _, _) -> (aluno, curso)) (mapMaybe comMatricula grades)
+            linhas = sortOn (\(m, _) -> (m.aluno.name, m.curso.name, m.disciplina.name)) (mapMaybe comMatricula grades)
             comMatricula grade = do
-                enrollment <- find (\e -> e.id == grade.enrollmentId) enrollments
-                pure ( nomeDoAluno students enrollment.studentId
-                     , nomeDoCurso courses enrollment.courseId
-                     , enrollment
-                     , grade
-                     )
+                m <- find (\m -> m.matricula.id == grade.enrollmentId) matriculas
+                pure (m, grade)
 
-            renderLinha (aluno, curso, enrollment, grade) = [hsx|
+            renderLinha (m, grade) = [hsx|
                 <tr>
-                    <td>{aluno}</td>
-                    <td>{curso}</td>
+                    <td>{m.aluno.name}</td>
+                    <td>{m.disciplina.name}</td>
+                    <td>{m.curso.name}</td>
                     <td class="text-end">{formatarNota (notaAV1 grade)}</td>
                     <td class="text-end">{formatarNota (notaAV2 grade)}</td>
                     <td class="text-end">{formatarMedia (notaAV3 grade)}</td>
                     <td class="text-end fw-bold">{formatarNota (mediaFinal grade)}</td>
-                    <td>{badgeSituacao (situacaoDaMatricula enrollment.status grade)}</td>
+                    <td>{badgeSituacao (situacaoDaMatricula m.matricula.status grade)}</td>
                     <td>{show (classificarMedia (mediaFinal grade))}</td>
                     <td><a href={ShowGradeAction grade.id}>Ver</a></td>
                     <td>{when (pode Gerenciar Notas) (editar grade)}</td>

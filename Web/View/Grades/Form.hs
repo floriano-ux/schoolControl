@@ -6,7 +6,7 @@ import Web.View.Prelude
 -- com OverloadedStrings basta passar uma string literal.
 renderForm :: Grade -> [OpcaoMatricula] -> Html -> Html
 renderForm grade opcoes textoDoBotao = formFor grade [hsx|
-    {(selectField #enrollmentId opcoes) { fieldLabel = "Matrícula (aluno — curso)", placeholder = "Selecione a matrícula" }}
+    {(selectField #enrollmentId opcoes) { fieldLabel = "Matrícula (aluno — disciplina / curso)", placeholder = "Selecione a matrícula" }}
 
     <div class="row">
         <div class="col-md-6">

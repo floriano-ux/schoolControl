@@ -1,11 +1,7 @@
 module Web.View.Enrollments.Show where
 import Web.View.Prelude
 
-data ShowView = ShowView
-    { enrollment :: Enrollment
-    , student    :: Student
-    , course     :: Course
-    }
+data ShowView = ShowView { detalhe :: MatriculaDetalhada }
 
 instance View ShowView where
     html ShowView { .. } = [hsx|
@@ -21,13 +17,16 @@ instance View ShowView where
             <div class="card-body">
                 <dl class="row mb-0">
                     <dt class="col-sm-3 text-muted">Aluno</dt>
-                    <dd class="col-sm-9 fw-semibold">{student.name} <small class="text-muted">({student.email})</small></dd>
+                    <dd class="col-sm-9 fw-semibold">{detalhe.aluno.name} <small class="text-muted">({detalhe.aluno.email})</small></dd>
+
+                    <dt class="col-sm-3 text-muted">Disciplina</dt>
+                    <dd class="col-sm-9">{detalhe.disciplina.name} <small class="text-muted">({detalhe.disciplina.workload} h)</small></dd>
 
                     <dt class="col-sm-3 text-muted">Curso</dt>
-                    <dd class="col-sm-9">{course.name} <small class="text-muted">({course.workload} h)</small></dd>
+                    <dd class="col-sm-9">{detalhe.curso.name}</dd>
 
                     <dt class="col-sm-3 text-muted">Status</dt>
-                    <dd class="col-sm-9">{badgeStatus enrollment.status}</dd>
+                    <dd class="col-sm-9">{badgeStatus detalhe.matricula.status}</dd>
                 </dl>
             </div>
         </div>
@@ -37,5 +36,5 @@ instance View ShowView where
                 [ breadcrumbLink "Matrículas" EnrollmentsAction
                 , breadcrumbText "Detalhes da matrícula"
                 ]
-            editar = [hsx|<a href={EditEnrollmentAction enrollment.id} class="btn btn-outline-primary">Editar matrícula</a>|]
+            editar = [hsx|<a href={EditEnrollmentAction detalhe.matricula.id} class="btn btn-outline-primary">Editar matrícula</a>|]
 

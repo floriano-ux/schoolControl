@@ -31,6 +31,16 @@ POST /UpdateCourse?courseId UpdateCourseAction
 DELETE /DeleteCourse?courseId DeleteCourseAction
 |]
 
+[routes|SubjectsController
+GET /Subjects SubjectsAction
+GET /NewSubject NewSubjectAction
+POST /CreateSubject CreateSubjectAction
+GET /ShowSubject?subjectId ShowSubjectAction
+GET /EditSubject?subjectId EditSubjectAction
+POST /UpdateSubject?subjectId UpdateSubjectAction
+DELETE /DeleteSubject?subjectId DeleteSubjectAction
+|]
+
 [routes|EnrollmentsController
 GET /Enrollments EnrollmentsAction
 GET /NewEnrollment NewEnrollmentAction

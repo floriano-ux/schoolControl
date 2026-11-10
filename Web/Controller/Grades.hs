@@ -10,17 +10,13 @@ instance Controller GradesController where
     beforeAction = exigirPermissao Visualizar Notas
 
     action GradesAction = do
-        grades      <- query @Grade |> fetch
-        enrollments <- query @Enrollment |> fetch
-        students    <- query @Student |> orderBy #name |> fetch
-        courses     <- query @Course |> orderBy #name |> fetch
+        grades     <- query @Grade |> fetch
+        matriculas <- carregarMatriculasDetalhadas
         render IndexView { .. }
 
     action ShowGradeAction { gradeId } = do
-        grade      <- fetch gradeId
-        enrollment <- fetch grade.enrollmentId
-        student    <- fetch enrollment.studentId
-        course     <- fetch enrollment.courseId
+        grade   <- fetch gradeId
+        detalhe <- buscarMatriculaDetalhada grade.enrollmentId
         render ShowView { .. }
 
     action NewGradeAction = do
@@ -99,11 +95,5 @@ validarUmaNotaPorMatricula grade = do
             grade |> attachFailure #enrollmentId "Esta matrícula já tem notas lançadas. Edite o lançamento existente."
         _ -> grade
 
--- Opções do select de matrícula: "Aluno — Curso (status)".
--- (A assinatura é obrigatória: sem argumentos, o GHC não infere o ?modelContext.)
 carregarOpcoesDeMatricula :: (?modelContext :: ModelContext) => IO [OpcaoMatricula]
-carregarOpcoesDeMatricula = do
-    enrollments <- query @Enrollment |> fetch
-    students    <- query @Student |> fetch
-    courses     <- query @Course |> fetch
-    pure (opcoesDeMatricula students courses enrollments)
+carregarOpcoesDeMatricula = opcoesDeMatricula <$> carregarMatriculasDetalhadas

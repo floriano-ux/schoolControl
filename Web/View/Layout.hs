@@ -68,6 +68,7 @@ linkDoMenu :: Recurso -> Html
 linkDoMenu recurso = case recurso of
     Estudantes -> [hsx|<a class="nav-link" href={StudentsAction}>Estudantes</a>|]
     Cursos     -> [hsx|<a class="nav-link" href={CoursesAction}>Cursos</a>|]
+    Disciplinas -> [hsx|<a class="nav-link" href={SubjectsAction}>Disciplinas</a>|]
     Matriculas -> [hsx|<a class="nav-link" href={EnrollmentsAction}>Matrículas</a>|]
     Notas      -> [hsx|<a class="nav-link" href={GradesAction}>Notas</a>|]
     Relatorios -> [hsx|<a class="nav-link" href={ReportsAction}>Relatórios</a>|]

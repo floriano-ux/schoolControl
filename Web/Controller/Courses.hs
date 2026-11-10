@@ -21,6 +21,7 @@ instance Controller CoursesController where
 
     action ShowCourseAction { courseId } = do
         course <- fetch courseId
+        subjects <- query @Subject |> filterWhere (#courseId, courseId) |> orderBy #name |> fetch
         render ShowView { .. }
 
     action EditCourseAction { courseId } = do

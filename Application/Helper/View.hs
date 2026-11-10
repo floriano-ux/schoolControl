@@ -75,10 +75,15 @@ badgeSituacao situacao = [hsx|<span class={"badge " <> cor}>{nomeDaSituacao situ
 
 -- Opções dos <select> dos formulários
 
-instance CanSelect Student where
-    type SelectValue Student = Id Student
-    selectValue student = student.id
-    selectLabel student = student.name
+instance CanSelect User where
+    type SelectValue User = Id User
+    selectValue user = user.id
+    selectLabel user = user.name
+
+instance CanSelect (Subject, Course) where
+    type SelectValue (Subject, Course) = Id Subject
+    selectValue (subject, _) = subject.id
+    selectLabel = rotuloDaDisciplina
 
 instance CanSelect Course where
     type SelectValue Course = Id Course

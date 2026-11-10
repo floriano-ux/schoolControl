@@ -63,12 +63,14 @@ instance Controller UsersController where
     action UpdateUserAction { userId } = do
         config <- carregarAuthConfig
         user <- fetch userId
-        let hashAtual = user.passwordHash
-        let docAtual  = user.document
+        let hashAtual  = user.passwordHash
+        let docAtual   = user.document
+        let papelAtual = user.userRole
         user
             |> buildUser
             |> validateField #passwordHash (senhaOpcional config)
             |> validarEmailDeUsuarioUnico
+            >>= validarTrocaDePapel papelAtual
             >>= ifValid \case
                 Left user -> render EditView { user = user |> set #passwordHash "", documento = "" }
                 Right user -> do
@@ -114,3 +116,9 @@ senhaOpcional config senha
 
 validarEmailDeUsuarioUnico user = user
     |> withCustomErrorMessageIO "Este e-mail já está em uso" validateIsUnique #email
+
+validarTrocaDePapel papelAtual user = do
+    matriculas <- query @Enrollment |> filterWhere (#studentId, user.id) |> fetchCount
+    pure if podeTrocarPapel papelAtual user.userRole matriculas
+        then user
+        else user |> attachFailure #userRole "Este aluno tem matrículas. Exclua as matrículas antes de trocar o papel."

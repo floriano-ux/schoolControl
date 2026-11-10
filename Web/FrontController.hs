@@ -12,6 +12,7 @@ import Web.Controller.Reports
 import Web.Controller.Registrations
 import Web.Controller.Sessions
 import Web.Controller.Students
+import Web.Controller.Subjects
 import Web.Controller.Static
 import Web.Controller.Users
 
@@ -27,6 +28,7 @@ instance FrontController WebApplication where
         , parseRoute @EnrollmentsController
         , parseRoute @CoursesController
         , parseRoute @StudentsController
+        , parseRoute @SubjectsController
         ]
 
 instance InitControllerContext WebApplication where

@@ -2,16 +2,16 @@ module Web.View.Enrollments.New where
 import Web.View.Prelude
 
 data NewView = NewView
-    { enrollment :: Enrollment
-    , students   :: [Student]
-    , courses    :: [Course]
+    { enrollment  :: Enrollment
+    , students    :: [User]
+    , disciplinas :: [(Subject, Course)]
     }
 
 instance View NewView where
     html NewView { .. } = [hsx|
         {breadcrumb}
         <h1>Nova matrícula</h1>
-        {renderForm enrollment students courses}
+        {renderForm enrollment students disciplinas}
     |]
         where
             breadcrumb = renderBreadcrumb
@@ -19,10 +19,10 @@ instance View NewView where
                 , breadcrumbText "Nova matrícula"
                 ]
 
-renderForm :: Enrollment -> [Student] -> [Course] -> Html
-renderForm enrollment students courses = formFor enrollment [hsx|
+renderForm :: Enrollment -> [User] -> [(Subject, Course)] -> Html
+renderForm enrollment students disciplinas = formFor enrollment [hsx|
     {(selectField #studentId students) { fieldLabel = "Aluno", placeholder = "Selecione o aluno" }}
-    {(selectField #courseId courses) { fieldLabel = "Curso", placeholder = "Selecione o curso" }}
+    {(selectField #subjectId disciplinas) { fieldLabel = "Disciplina", placeholder = "Selecione a disciplina" }}
     {(selectField #status statuses) { fieldLabel = "Status" }}
     {submitButton { label = "Matricular" }}
 |]

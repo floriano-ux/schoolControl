@@ -3,6 +3,8 @@ module Application.Helper.Controller
     , viaSenha
     , exigirPermissao
     , opcoesDeMatricula
+    , carregarMatriculasDetalhadas
+    , buscarMatriculaDetalhada
     , tentar
     , logAuthInfo
     , logAuthWarn
@@ -77,14 +79,30 @@ logAuthWarn mensagem = escreverLog "WARN" ("[auth] " <> mensagem)
 escreverLog :: Text -> Text -> IO ()
 escreverLog nivel mensagem = Text.IO.hPutStrLn stderr ("[" <> nivel <> "] " <> mensagem)
 
--- Opções do select de matrícula, em ordem alfabética: "Aluno — Curso (status)".
-opcoesDeMatricula :: [Student] -> [Course] -> [Enrollment] -> [OpcaoMatricula]
-opcoesDeMatricula students courses enrollments =
-    sortOn (.rotulo) (map opcao enrollments)
+-- Opções do select de matrícula, em ordem alfabética: "Aluno — Disciplina / Curso (status)".
+opcoesDeMatricula :: [MatriculaDetalhada] -> [OpcaoMatricula]
+opcoesDeMatricula matriculas =
+    sortOn (.rotulo) (map opcao matriculas)
   where
-    opcao enrollment = OpcaoMatricula
-        { matriculaId = enrollment.id
-        , rotulo = nomeDoAluno students enrollment.studentId
-            <> " — " <> nomeDoCurso courses enrollment.courseId
-            <> " (" <> nomeDoStatus enrollment.status <> ")"
+    opcao m = OpcaoMatricula
+        { matriculaId = m.matricula.id
+        , rotulo = m.aluno.name
+            <> " — " <> m.disciplina.name <> " / " <> m.curso.name
+            <> " (" <> nomeDoStatus m.matricula.status <> ")"
         }
+
+carregarMatriculasDetalhadas :: (?modelContext :: ModelContext) => IO [MatriculaDetalhada]
+carregarMatriculasDetalhadas = do
+    users       <- query @User |> fetch
+    subjects    <- query @Subject |> fetch
+    courses     <- query @Course |> fetch
+    enrollments <- query @Enrollment |> fetch
+    pure (detalharMatriculas users subjects courses enrollments)
+
+buscarMatriculaDetalhada :: (?modelContext :: ModelContext) => Id Enrollment -> IO MatriculaDetalhada
+buscarMatriculaDetalhada enrollmentId = do
+    enrollment <- fetch enrollmentId
+    student    <- fetch enrollment.studentId
+    subject    <- fetch enrollment.subjectId
+    course     <- fetch subject.courseId
+    pure MatriculaDetalhada { matricula = enrollment, aluno = student, disciplina = subject, curso = course }
