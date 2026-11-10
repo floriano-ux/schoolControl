@@ -1,7 +1,7 @@
 module Web.View.Students.Index where
 import Web.View.Prelude
 
-data IndexView = IndexView { students :: [Student] }
+data IndexView = IndexView { students :: [User] }
 
 instance View IndexView where
     html IndexView { .. } = [hsx|
@@ -31,7 +31,7 @@ instance View IndexView where
                 ]
             novoEstudante = [hsx|<a href={pathTo NewStudentAction} class="btn btn-primary">+ Novo estudante</a>|]
 
-renderStudent :: Student -> Html
+renderStudent :: User -> Html
 renderStudent student = [hsx|
     <tr>
         <td>{student.name}</td>

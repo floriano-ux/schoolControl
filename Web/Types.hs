@@ -13,11 +13,12 @@ data StaticController = WelcomeAction deriving (Eq, Show, Data)
 data StudentsController
     = StudentsAction
     | NewStudentAction
-    | ShowStudentAction { studentId :: !(Id Student) }
+    | ShowStudentAction { studentId :: !(Id User) }
     | CreateStudentAction
-    | EditStudentAction { studentId :: !(Id Student) }
-    | UpdateStudentAction { studentId :: !(Id Student) }
-    | DeleteStudentAction { studentId :: !(Id Student) }
+    | EditStudentAction { studentId :: !(Id User) }
+    | UpdateStudentAction { studentId :: !(Id User) }
+    | DeleteStudentAction { studentId :: !(Id User) }
+    | RegenerarSenhaAction { studentId :: !(Id User) }
     deriving (Eq, Show, Data)
 
 data CoursesController

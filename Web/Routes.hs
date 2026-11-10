@@ -17,6 +17,7 @@ GET /ShowStudent?studentId ShowStudentAction
 GET /EditStudent?studentId EditStudentAction
 POST /UpdateStudent?studentId UpdateStudentAction
 DELETE /DeleteStudent?studentId DeleteStudentAction
+POST /RegenerarSenha?studentId RegenerarSenhaAction
 |]
 
 
