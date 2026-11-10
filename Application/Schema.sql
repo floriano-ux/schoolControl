@@ -2,15 +2,16 @@
 CREATE TYPE enrollment_status AS ENUM ('ativa', 'trancada', 'concluida');
 CREATE TYPE user_role AS ENUM ('admin', 'coordenador', 'professor', 'aluno');
 
-CREATE TABLE students (
+CREATE TABLE courses (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY NOT NULL,
     name TEXT NOT NULL,
-    email TEXT NOT NULL,
+    workload INT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );
 
-CREATE TABLE courses (
+CREATE TABLE subjects (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY NOT NULL,
+    course_id UUID NOT NULL,
     name TEXT NOT NULL,
     workload INT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
@@ -19,7 +20,7 @@ CREATE TABLE courses (
 CREATE TABLE enrollments (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY NOT NULL,
     student_id UUID NOT NULL,
-    course_id UUID NOT NULL,
+    subject_id UUID NOT NULL,
     status enrollment_status DEFAULT 'ativa' NOT NULL
 );
 
@@ -51,18 +52,21 @@ CREATE TABLE users (
 );
 
 CREATE INDEX enrollments_student_id_index ON enrollments (student_id);
-CREATE INDEX enrollments_course_id_index ON enrollments (course_id);
+CREATE INDEX enrollments_subject_id_index ON enrollments (subject_id);
+CREATE INDEX subjects_course_id_index ON subjects (course_id);
 CREATE INDEX grades_enrollment_id_index ON grades (enrollment_id);
 
-ALTER TABLE enrollments ADD CONSTRAINT enrollments_ref_student_id FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE;
-ALTER TABLE enrollments ADD CONSTRAINT enrollments_ref_course_id FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE;
+ALTER TABLE enrollments ADD CONSTRAINT enrollments_ref_student_id FOREIGN KEY (student_id) REFERENCES users (id) ON DELETE CASCADE;
+ALTER TABLE enrollments ADD CONSTRAINT enrollments_ref_subject_id FOREIGN KEY (subject_id) REFERENCES subjects (id) ON DELETE CASCADE;
+ALTER TABLE subjects ADD CONSTRAINT subjects_ref_course_id FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE;
 ALTER TABLE grades ADD CONSTRAINT grades_ref_enrollment_id FOREIGN KEY (enrollment_id) REFERENCES enrollments (id) ON DELETE CASCADE;
 
 -- Restrições de integridade (Sprint 2)
-ALTER TABLE students ADD CONSTRAINT students_email_key UNIQUE (email);
 ALTER TABLE users ADD CONSTRAINT users_email_key UNIQUE (email);
 ALTER TABLE courses ADD CONSTRAINT courses_workload_check CHECK (workload > 0);
-ALTER TABLE enrollments ADD CONSTRAINT enrollments_student_id_course_id_key UNIQUE (student_id, course_id);
+ALTER TABLE subjects ADD CONSTRAINT subjects_workload_check CHECK (workload > 0);
+ALTER TABLE subjects ADD CONSTRAINT subjects_course_id_name_key UNIQUE (course_id, name);
+ALTER TABLE enrollments ADD CONSTRAINT enrollments_student_id_subject_id_key UNIQUE (student_id, subject_id);
 ALTER TABLE grades ADD CONSTRAINT grades_pe1_check CHECK ((pe1 >= 0) AND (pe1 <= 10));
 ALTER TABLE grades ADD CONSTRAINT grades_avf1_check CHECK ((avf1 >= 0) AND (avf1 <= 10));
 ALTER TABLE grades ADD CONSTRAINT grades_pe2_check CHECK ((pe2 >= 0) AND (pe2 <= 10));
