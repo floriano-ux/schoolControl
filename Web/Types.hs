@@ -92,7 +92,7 @@ data RegistrationsController
     deriving (Eq, Show, Data)
 
 
--- Item do select de matrículas na tela de Notas ("Aluno — Disciplina / Curso (status)").
+-- Item do select de aluno no lançamento de notas ("Aluno (status)").
 data OpcaoMatricula = OpcaoMatricula
     { matriculaId :: !(Id Enrollment)
     , rotulo      :: !Text

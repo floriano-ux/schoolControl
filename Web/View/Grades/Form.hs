@@ -2,11 +2,11 @@ module Web.View.Grades.Form (renderForm) where
 import Web.View.Prelude
 
 -- Formulário compartilhado entre "Lançar notas" e "Editar notas".
--- O texto do botão é Html (o label do submitButton é Html no IHP 1.6);
--- com OverloadedStrings basta passar uma string literal.
-renderForm :: Grade -> [OpcaoMatricula] -> Html -> Html
-renderForm grade opcoes textoDoBotao = formFor grade [hsx|
-    {(selectField #enrollmentId opcoes) { fieldLabel = "Matrícula (aluno — disciplina / curso)", placeholder = "Selecione a matrícula" }}
+-- O subjectId vai junto para que, em caso de erro, a tela volte com a mesma disciplina.
+renderForm :: Grade -> Id Subject -> [OpcaoMatricula] -> Html -> Html
+renderForm grade disciplinaId opcoes textoDoBotao = formFor grade [hsx|
+    <input type="hidden" name="subjectId" value={inputValue disciplinaId}/>
+    {(selectField #enrollmentId opcoes) { fieldLabel = "Aluno", placeholder = "Selecione o aluno" }}
 
     <div class="row">
         <div class="col-md-6">

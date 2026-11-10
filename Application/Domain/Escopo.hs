@@ -3,7 +3,10 @@ module Application.Domain.Escopo
     ( ministra
     , disciplinasDoProfessor
     , disciplinasVisiveis
+    , cursosVisiveis
     , matriculasVisiveis
+    , alunosVisiveis
+    , matriculaVisivel
     , matriculasDaDisciplina
     , semNotaLancada
     , professorValido
@@ -26,11 +29,25 @@ disciplinasVisiveis user subjects = case user.userRole of
     Professor -> disciplinasDoProfessor user subjects
     _         -> subjects
 
+cursosVisiveis :: User -> [Subject] -> [Course] -> [Course]
+cursosVisiveis user subjects courses = case user.userRole of
+    Professor -> filter (\c -> any (\s -> s.courseId == c.id) (disciplinasDoProfessor user subjects)) courses
+    _         -> courses
+
 matriculasVisiveis :: User -> [MatriculaDetalhada] -> [MatriculaDetalhada]
 matriculasVisiveis user matriculas = case user.userRole of
     Professor -> filter (\m -> ministra user m.disciplina) matriculas
     Aluno     -> filter (\m -> m.aluno.id == user.id) matriculas
     _         -> matriculas
+
+matriculaVisivel :: User -> MatriculaDetalhada -> Bool
+matriculaVisivel user m = not (null (matriculasVisiveis user [m]))
+
+-- Professor: só os alunos matriculados nas suas disciplinas (recebe as matrículas já escopadas).
+alunosVisiveis :: User -> [MatriculaDetalhada] -> [User] -> [User]
+alunosVisiveis user matriculas users = case user.userRole of
+    Professor -> filter (\u -> any (\m -> m.aluno.id == u.id) matriculas) users
+    _         -> users
 
 matriculasDaDisciplina :: Id Subject -> [MatriculaDetalhada] -> [MatriculaDetalhada]
 matriculasDaDisciplina subjectId =

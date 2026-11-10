@@ -2,9 +2,11 @@ module Application.Helper.Controller
     ( viaDominio
     , viaSenha
     , exigirPermissao
-    , opcoesDeMatricula
+    , opcoesDeAluno
     , carregarMatriculasDetalhadas
     , buscarMatriculaDetalhada
+    , matriculasVisiveisPara
+    , exigirMatriculaVisivel
     , tentar
     , logAuthInfo
     , logAuthWarn
@@ -79,17 +81,12 @@ logAuthWarn mensagem = escreverLog "WARN" ("[auth] " <> mensagem)
 escreverLog :: Text -> Text -> IO ()
 escreverLog nivel mensagem = Text.IO.hPutStrLn stderr ("[" <> nivel <> "] " <> mensagem)
 
--- Opções do select de matrícula, em ordem alfabética: "Aluno — Disciplina / Curso (status)".
-opcoesDeMatricula :: [MatriculaDetalhada] -> [OpcaoMatricula]
-opcoesDeMatricula matriculas =
-    sortOn (.rotulo) (map opcao matriculas)
-  where
-    opcao m = OpcaoMatricula
-        { matriculaId = m.matricula.id
-        , rotulo = m.aluno.name
-            <> " — " <> m.disciplina.name <> " / " <> m.curso.name
-            <> " (" <> nomeDoStatus m.matricula.status <> ")"
-        }
+-- Opções do select de aluno no lançamento de notas: "Aluno (status)".
+opcoesDeAluno :: [MatriculaDetalhada] -> [OpcaoMatricula]
+opcoesDeAluno = map \m -> OpcaoMatricula
+    { matriculaId = m.matricula.id
+    , rotulo = m.aluno.name <> " (" <> nomeDoStatus m.matricula.status <> ")"
+    }
 
 carregarMatriculasDetalhadas :: (?modelContext :: ModelContext) => IO [MatriculaDetalhada]
 carregarMatriculasDetalhadas = do
@@ -106,3 +103,10 @@ buscarMatriculaDetalhada enrollmentId = do
     subject    <- fetch enrollment.subjectId
     course     <- fetch subject.courseId
     pure MatriculaDetalhada { matricula = enrollment, aluno = student, disciplina = subject, curso = course }
+
+matriculasVisiveisPara :: (?modelContext :: ModelContext) => User -> IO [MatriculaDetalhada]
+matriculasVisiveisPara user = matriculasVisiveis user <$> carregarMatriculasDetalhadas
+
+-- 404 quando a matrícula não pertence ao escopo do usuário (ex.: disciplina de outro professor).
+exigirMatriculaVisivel :: (?request :: Request, ?respond :: Respond) => User -> MatriculaDetalhada -> IO ()
+exigirMatriculaVisivel user detalhe = notFoundWhen (not (matriculaVisivel user detalhe))
