@@ -5,6 +5,7 @@ import Web.Controller.Prelude
 import Web.View.Layout (defaultLayout)
 
 -- Controller Imports
+import Web.Controller.Boletim
 import Web.Controller.Courses
 import Web.Controller.Enrollments
 import Web.Controller.Grades
@@ -24,6 +25,7 @@ instance FrontController WebApplication where
         , parseRoute @SessionsController
         , parseRoute @UsersController
         , parseRoute @ReportsController
+        , parseRoute @BoletimController
         , parseRoute @GradesController
         , parseRoute @EnrollmentsController
         , parseRoute @CoursesController

@@ -1,5 +1,7 @@
 module Application.Domain.Relatorios
     ( boletim
+    , boletimDoAluno
+    , mediaGeral
     , nomesAprovados
     , matriculasAtivasPorCurso
     , mediaPorCurso
@@ -40,6 +42,16 @@ boletim matriculas grades =
     , grade <- grades
     , grade.enrollmentId == m.matricula.id
     ]
+
+-- Boletim individual: cada matrícula com a sua nota (se já lançada), por curso e disciplina.
+boletimDoAluno :: [MatriculaDetalhada] -> [Grade] -> [(MatriculaDetalhada, Maybe Grade)]
+boletimDoAluno matriculas grades =
+    sortOn (\(m, _) -> (m.curso.name, m.disciplina.name))
+        [ (m, find (\g -> g.enrollmentId == m.matricula.id) grades) | m <- matriculas ]
+
+-- Média das NFs das matrículas com nota lançada.
+mediaGeral :: [(MatriculaDetalhada, Maybe Grade)] -> Maybe Double
+mediaGeral linhas = arredondar <$> mediaDaTurma [ mediaFinal g | (_, Just g) <- linhas ]
 
 nomesAprovados :: [(Text, Double, Situacao)] -> [Text]
 nomesAprovados linhas = [ nome | (nome, _, Aprovado) <- linhas ]

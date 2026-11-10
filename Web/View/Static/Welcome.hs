@@ -86,4 +86,5 @@ atalho recurso = [hsx|
             Matriculas -> ("🧾", "Matrículas", "Alunos matriculados em cada disciplina", pathTo EnrollmentsAction)
             Notas      -> ("📝", "Notas", "Lançamento de PE/AVf e situação final", pathTo GradesAction)
             Relatorios -> ("📊", "Relatórios", "Médias, ranking e alunos por curso", pathTo ReportsAction)
+            Boletim    -> ("🗒️", "Meu boletim", "Suas disciplinas, notas e situação", pathTo MeuBoletimAction)
             Usuarios   -> ("👥", "Usuários", "Contas de acesso e papéis", pathTo UsersAction)

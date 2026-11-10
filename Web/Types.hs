@@ -65,6 +65,10 @@ data ReportsController
     = ReportsAction
     deriving (Eq, Show, Data)
 
+data BoletimController
+    = MeuBoletimAction
+    deriving (Eq, Show, Data)
+
 data UsersController
     = UsersAction
     | NewUserAction

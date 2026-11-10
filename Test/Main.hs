@@ -166,6 +166,13 @@ specs = do
             let ativasHaskell = aplicarFiltro (FiltroRelatorio (Just cursoHaskell.id) Nothing (Just Ativa)) detalhadas
             boletim ativasHaskell notasExemplo
                 `shouldBe` [("Ana", 9.0, Aprovado), ("Bruno", 6.0, Aprovado)]
+        it "boletimDoAluno junta cada matrícula à sua nota e ordena por curso e disciplina" do
+            let doBruno = filter (\m -> m.aluno.id == bruno.id) detalhadas
+                linhas  = boletimDoAluno doBruno notasExemplo
+            map (\(m, g) -> (m.disciplina.name, fmap mediaFinal g)) linhas
+                `shouldBe` [("Funcional", Just 6), ("Consultas", Nothing)]
+            mediaGeral linhas `shouldBe` Just 6
+            mediaGeral [] `shouldBe` Nothing
         it "taxaAprovacao calcula percentual ou Nothing se lista vazia" do
             let linhas = boletim (take 2 detalhadas) notasExemplo
             taxaAprovacao linhas `shouldBe` Just 100.0
@@ -183,8 +190,9 @@ specs = do
             parseStatus "invalido" `shouldBe` Nothing
 
     describe "podeAcessar (papéis e permissões)" do
-        it "administrador pode tudo" do
-            and [ podeAcessar Admin op r | op <- [minBound .. maxBound], r <- [minBound .. maxBound] ] `shouldBe` True
+        it "administrador pode tudo, exceto o boletim pessoal de aluno" do
+            and [ podeAcessar Admin op r | op <- [minBound .. maxBound], r <- [minBound .. maxBound], r /= Boletim ] `shouldBe` True
+            podeAcessar Admin Visualizar Boletim `shouldBe` False
         it "só o administrador gerencia usuários" do
             map (\papel -> podeAcessar papel Visualizar Usuarios) [Admin, Coordenador, Professor, Aluno]
                 `shouldBe` [True, False, False, False]
@@ -192,10 +200,15 @@ specs = do
             (podeAcessar Coordenador Visualizar Notas, podeAcessar Coordenador Gerenciar Notas) `shouldBe` (True, False)
         it "professor lança notas, mas não altera cursos" do
             (podeAcessar Professor Gerenciar Notas, podeAcessar Professor Gerenciar Cursos) `shouldBe` (True, False)
-        it "aluno só visualiza cursos, disciplinas e relatórios" do
-            recursosVisiveis Aluno `shouldBe` [Cursos, Disciplinas, Relatorios]
+        it "aluno só visualiza cursos, disciplinas e o próprio boletim" do
+            recursosVisiveis Aluno `shouldBe` [Cursos, Disciplinas, Boletim]
+            podeAcessar Aluno Visualizar Relatorios `shouldBe` False
             podeAcessar Aluno Gerenciar Cursos `shouldBe` False
             podeAcessar Aluno Gerenciar Disciplinas `shouldBe` False
+        it "menu de cada papel da equipe" do
+            recursosVisiveis Admin `shouldBe` [Estudantes, Cursos, Disciplinas, Matriculas, Notas, Relatorios, Usuarios]
+            recursosVisiveis Coordenador `shouldBe` [Estudantes, Cursos, Disciplinas, Matriculas, Notas, Relatorios]
+            recursosVisiveis Professor `shouldBe` [Estudantes, Cursos, Disciplinas, Matriculas, Notas, Relatorios]
         it "disciplinas seguem as mesmas regras de cursos" do
             [ podeAcessar papel op Disciplinas | papel <- [Admin, Coordenador, Professor, Aluno], op <- [minBound .. maxBound] ]
                 `shouldBe` [ podeAcessar papel op Cursos | papel <- [Admin, Coordenador, Professor, Aluno], op <- [minBound .. maxBound] ]

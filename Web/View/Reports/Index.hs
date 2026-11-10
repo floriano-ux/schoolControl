@@ -215,7 +215,7 @@ renderSituacao (situacao, quantidade) = [hsx|
     <tr><td>{nomeDaSituacao situacao}</td><td class="text-end">{quantidade}</td></tr>
 |]
 
--- Nomes de alunos só aparecem para quem pode ver Estudantes (o Aluno vê apenas números agregados).
+-- Nomes de alunos só aparecem para quem pode ver Estudantes.
 rankingCard :: [(Int, Text, Double)] -> Html
 rankingCard ranking = [hsx|
     <div class="col-lg-6">

@@ -72,6 +72,7 @@ linkDoMenu recurso = case recurso of
     Matriculas -> [hsx|<a class="nav-link" href={EnrollmentsAction}>Matrículas</a>|]
     Notas      -> [hsx|<a class="nav-link" href={GradesAction}>Notas</a>|]
     Relatorios -> [hsx|<a class="nav-link" href={ReportsAction}>Relatórios</a>|]
+    Boletim    -> [hsx|<a class="nav-link" href={MeuBoletimAction}>Meu boletim</a>|]
     Usuarios   -> [hsx|<a class="nav-link" href={UsersAction}>Usuários</a>|]
 
 -- The 'assetPath' function used below appends a `?v=SOME_VERSION` to the static assets in production

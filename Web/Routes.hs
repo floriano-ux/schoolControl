@@ -65,6 +65,10 @@ DELETE /DeleteGrade?gradeId DeleteGradeAction
 GET /Reports ReportsAction
 |]
 
+[routes|BoletimController
+GET /MeuBoletim MeuBoletimAction
+|]
+
 [routes|UsersController
 GET /Users UsersAction
 GET /NewUser NewUserAction
