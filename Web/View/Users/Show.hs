@@ -3,7 +3,8 @@ import Web.View.Prelude
 
 data ShowView = ShowView
     { user      :: User
-    , documento :: Maybe Text
+    , documento   :: Maybe Text
+    , disciplinas :: [Subject]
     }
 
 instance View ShowView where
@@ -33,10 +34,22 @@ instance View ShowView where
                 </dl>
             </div>
         </div>
+        {when (user.userRole == Professor) disciplinasMinistradas}
     |]
         where
             breadcrumb = renderBreadcrumb
                 [ breadcrumbLink "Usuários" UsersAction
                 , breadcrumbText "Detalhes do usuário"
                 ]
+            disciplinasMinistradas = [hsx|
+                <div class="card">
+                    <div class="card-header">Disciplinas que ministra</div>
+                    <ul class="list-group list-group-flush">
+                        {forEach disciplinas disciplinaItem}
+                        {when (null disciplinas) nenhuma}
+                    </ul>
+                </div>
+            |]
+            disciplinaItem subject = [hsx|<li class="list-group-item"><a href={ShowSubjectAction subject.id}>{subject.name}</a></li>|]
+            nenhuma = [hsx|<li class="list-group-item text-muted">Nenhuma disciplina atribuída. Atribua em Disciplinas → Editar.</li>|]
 

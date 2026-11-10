@@ -10,33 +10,38 @@ instance Controller SubjectsController where
     beforeAction = exigirPermissao Visualizar Disciplinas
 
     action SubjectsAction = do
-        subjects <- query @Subject |> orderBy #name |> fetch
-        courses  <- query @Course |> orderBy #name |> fetch
+        subjects    <- query @Subject |> orderBy #name |> fetch
+        courses     <- query @Course |> orderBy #name |> fetch
+        professores <- buscarProfessores
         render IndexView { .. }
 
     action NewSubjectAction = do
         exigirPermissao Gerenciar Disciplinas
         let subject = newRecord @Subject
-        courses <- query @Course |> orderBy #name |> fetch
+        courses     <- query @Course |> orderBy #name |> fetch
+        professores <- buscarProfessores
         render NewView { .. }
 
     action ShowSubjectAction { subjectId } = do
-        subject <- fetch subjectId
-        course  <- fetch subject.courseId
+        subject     <- fetch subjectId
+        course      <- fetch subject.courseId
+        professores <- buscarProfessores
         render ShowView { .. }
 
     action EditSubjectAction { subjectId } = do
         exigirPermissao Gerenciar Disciplinas
-        subject <- fetch subjectId
-        courses <- query @Course |> orderBy #name |> fetch
+        subject     <- fetch subjectId
+        courses     <- query @Course |> orderBy #name |> fetch
+        professores <- buscarProfessores
         render EditView { .. }
 
     action UpdateSubjectAction { subjectId } = do
         exigirPermissao Gerenciar Disciplinas
-        subject <- fetch subjectId
-        courses <- query @Course |> orderBy #name |> fetch
+        subject     <- fetch subjectId
+        courses     <- query @Course |> orderBy #name |> fetch
+        professores <- buscarProfessores
         subject
-            |> buildSubject
+            |> buildSubject professores
             |> validarNomeUnicoNoCurso
             >>= ifValid \case
                 Left subject -> render EditView { .. }
@@ -47,9 +52,10 @@ instance Controller SubjectsController where
 
     action CreateSubjectAction = do
         exigirPermissao Gerenciar Disciplinas
-        courses <- query @Course |> orderBy #name |> fetch
+        courses     <- query @Course |> orderBy #name |> fetch
+        professores <- buscarProfessores
         newRecord @Subject
-            |> buildSubject
+            |> buildSubject professores
             |> validarNomeUnicoNoCurso
             >>= ifValid \case
                 Left subject -> render NewView { .. }
@@ -65,10 +71,17 @@ instance Controller SubjectsController where
         setSuccessMessage "Disciplina excluída"
         redirectTo SubjectsAction
 
-buildSubject subject = subject
-    |> fill @'["name", "workload", "courseId"]
+buscarProfessores :: (?modelContext :: ModelContext) => IO [User]
+buscarProfessores = query @User |> filterWhere (#userRole, Professor) |> orderBy #name |> fetch
+
+buildSubject professores subject = subject
+    |> fill @'["name", "workload", "courseId", "professorId"]
     |> validateField #name (nonEmpty |> withCustomErrorMessage "Informe o nome da disciplina")
     |> validateField #workload (viaDominio validarCargaHoraria)
+    |> validateField #professorId (\professorId ->
+        if professorValido professores professorId
+            then Success
+            else Failure "Selecione um usuário com papel de professor")
 
 -- Espelha a restrição UNIQUE (course_id, name) do banco.
 validarNomeUnicoNoCurso subject = do

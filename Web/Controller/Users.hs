@@ -19,7 +19,8 @@ instance Controller UsersController where
         user <- fetch userId
         config <- carregarAuthConfig
         let documento = decifrarOpcional config user.document
-        render ShowView { user, documento }
+        disciplinas <- query @Subject |> filterWhere (#professorId, Just userId) |> orderBy #name |> fetch
+        render ShowView { user, documento, disciplinas }
 
     action NewUserAction = do
         let user = newRecord @User
@@ -118,7 +119,10 @@ validarEmailDeUsuarioUnico user = user
     |> withCustomErrorMessageIO "Este e-mail já está em uso" validateIsUnique #email
 
 validarTrocaDePapel papelAtual user = do
-    matriculas <- query @Enrollment |> filterWhere (#studentId, user.id) |> fetchCount
-    pure if podeTrocarPapel papelAtual user.userRole matriculas
+    vinculos <- case papelAtual of
+        Aluno     -> query @Enrollment |> filterWhere (#studentId, user.id) |> fetchCount
+        Professor -> query @Subject |> filterWhere (#professorId, Just user.id) |> fetchCount
+        _         -> pure 0
+    pure if podeTrocarPapel papelAtual user.userRole vinculos
         then user
-        else user |> attachFailure #userRole "Este aluno tem matrículas. Exclua as matrículas antes de trocar o papel."
+        else user |> attachFailure #userRole (mensagemTrocaDePapel papelAtual)

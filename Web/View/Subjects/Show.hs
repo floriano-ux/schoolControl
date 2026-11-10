@@ -3,7 +3,8 @@ import Web.View.Prelude
 
 data ShowView = ShowView
     { subject :: Subject
-    , course  :: Course
+    , course      :: Course
+    , professores :: [User]
     }
 
 instance View ShowView where
@@ -13,6 +14,7 @@ instance View ShowView where
         <dl>
             <dt>Nome</dt><dd>{subject.name}</dd>
             <dt>Curso</dt><dd><a href={ShowCourseAction course.id}>{course.name}</a></dd>
+            <dt>Professor</dt><dd>{nomeDoProfessor professores subject}</dd>
             <dt>Carga horária</dt><dd>{subject.workload} horas</dd>
         </dl>
     |]

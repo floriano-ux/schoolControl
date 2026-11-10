@@ -3,7 +3,8 @@ import Web.View.Prelude
 
 data IndexView = IndexView
     { subjects :: [Subject]
-    , courses  :: [Course]
+    , courses     :: [Course]
+    , professores :: [User]
     }
 
 instance View IndexView where
@@ -18,6 +19,7 @@ instance View IndexView where
                         <tr>
                             <th>Nome</th>
                             <th>Curso</th>
+                            <th>Professor</th>
                             <th>Carga horária</th>
                             <th></th>
                             {when (pode Gerenciar Disciplinas) colunasDeAcao}
@@ -40,6 +42,7 @@ instance View IndexView where
                 <tr>
                     <td>{subject.name}</td>
                     <td>{course.name}</td>
+                    <td>{nomeDoProfessor professores subject}</td>
                     <td>{subject.workload} h</td>
                     <td><a href={ShowSubjectAction subject.id}>Ver</a></td>
                     {when (pode Gerenciar Disciplinas) (celulasDeAcao (editar subject) (linkExcluir (pathTo (DeleteSubjectAction subject.id))))}
