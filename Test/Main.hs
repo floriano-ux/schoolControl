@@ -198,6 +198,8 @@ specs = do
                 `shouldBe` [True, False, False, False]
         it "coordenador vê as notas, mas não as altera" do
             (podeAcessar Coordenador Visualizar Notas, podeAcessar Coordenador Gerenciar Notas) `shouldBe` (True, False)
+        it "professor não acessa a tela de matrículas" do
+            (podeAcessar Professor Visualizar Matriculas, podeAcessar Professor Gerenciar Matriculas) `shouldBe` (False, False)
         it "professor lança notas, mas não altera cursos" do
             (podeAcessar Professor Gerenciar Notas, podeAcessar Professor Gerenciar Cursos) `shouldBe` (True, False)
         it "aluno só visualiza cursos, disciplinas e o próprio boletim" do
@@ -208,7 +210,7 @@ specs = do
         it "menu de cada papel da equipe" do
             recursosVisiveis Admin `shouldBe` [Estudantes, Cursos, Disciplinas, Matriculas, Notas, Relatorios, Usuarios]
             recursosVisiveis Coordenador `shouldBe` [Estudantes, Cursos, Disciplinas, Matriculas, Notas, Relatorios]
-            recursosVisiveis Professor `shouldBe` [Estudantes, Cursos, Disciplinas, Matriculas, Notas, Relatorios]
+            recursosVisiveis Professor `shouldBe` [Estudantes, Cursos, Disciplinas, Notas, Relatorios]
         it "disciplinas seguem as mesmas regras de cursos" do
             [ podeAcessar papel op Disciplinas | papel <- [Admin, Coordenador, Professor, Aluno], op <- [minBound .. maxBound] ]
                 `shouldBe` [ podeAcessar papel op Cursos | papel <- [Admin, Coordenador, Professor, Aluno], op <- [minBound .. maxBound] ]
@@ -254,6 +256,28 @@ specs = do
             professorValido usuarios Nothing `shouldBe` True
             professorValido usuarios (Just professora.id) `shouldBe` True
             professorValido usuarios (Just ana.id) `shouldBe` False
+        it "alunosComDisciplinas lista as disciplinas de cada aluno e filtra por disciplina" do
+            let visiveis = matriculasVisiveis professora detalhadas
+                nomes linhas = map (\(u, ds) -> (u.name, ds)) linhas
+            nomes (alunosComDisciplinas Nothing detalhadas [ana, bruno])
+                `shouldBe` [("Ana", ["Funcional"]), ("Bruno", ["Consultas", "Funcional"])]
+            nomes (alunosComDisciplinas (Just consultas.id) detalhadas [ana, bruno])
+                `shouldBe` [("Bruno", ["Consultas", "Funcional"])]
+            nomes (alunosComDisciplinas Nothing visiveis [ana, bruno])
+                `shouldBe` [("Ana", ["Funcional"]), ("Bruno", ["Funcional"])]
+            alunosComDisciplinas (Just consultas.id) visiveis [ana, bruno] `shouldBe` []
+        it "um professor pode ministrar várias disciplinas (redistribuirDisciplinas)" do
+            let alteradas = redistribuirDisciplinas professora.id [funcional.id, monadas.id, consultas.id] disciplinas
+                depois    = map (\s -> fromMaybe s (find (\a -> a.id == s.id) alteradas)) disciplinas
+            map (.name) alteradas `shouldBe` ["Mônadas", "Consultas"]
+            map (.name) (disciplinasDoProfessor professora depois) `shouldBe` ["Funcional", "Mônadas", "Consultas"]
+        it "desmarcar uma disciplina a deixa sem professor; as de outros professores não mudam" do
+            let outro     = aluno "00000000-0000-0000-0000-0000000000f2" "Otávio" |> set #userRole Professor
+                deOutro   = monadas |> set #professorId (Just outro.id)
+                alteradas = redistribuirDisciplinas professora.id [consultas.id] [funcional, deOutro, consultas]
+            map (\s -> (s.name, s.professorId)) alteradas
+                `shouldBe` [("Funcional", Nothing), ("Consultas", Just professora.id)]
+            redistribuirDisciplinas professora.id [funcional.id] disciplinas `shouldBe` []
         it "nomeDoProfessor mostra o responsável ou \"Sem professor\"" do
             nomeDoProfessor usuarios funcional `shouldBe` "Paula"
             nomeDoProfessor usuarios consultas `shouldBe` "Sem professor"
