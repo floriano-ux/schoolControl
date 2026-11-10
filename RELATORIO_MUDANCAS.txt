@@ -283,8 +283,13 @@ Modelo de dados atual:
   - Excluir um aluno apaga as matrículas e as notas dele.
 
 5.4 Escopo do professor
-  - O professor só vê alunos, matrículas, notas e relatórios das disciplinas
-    que ministra. Fora desse escopo, a página responde 404.
+  - Um professor pode ministrar várias disciplinas. Cada disciplina tem um
+    único professor responsável.
+  - O professor só vê alunos, notas e relatórios das disciplinas que
+    ministra. Fora desse escopo, a página responde 404. Ele não tem acesso à
+    tela de Matrículas.
+  - "Meus alunos" mostra as disciplinas de cada aluno e pode ser filtrado por
+    disciplina (só as que o professor ministra).
   - O professor só lança, edita e exclui notas das suas disciplinas.
   - Um professor que ministra disciplinas não pode trocar de papel. A regra
     vale também para o aluno com matrículas (podeTrocarPapel).
@@ -328,7 +333,7 @@ Modelo de dados atual:
   Estudantes   |   G   |      G      |    V*     |   -
   Cursos       |   G   |      G      |     V     |   V
   Disciplinas  |   G   |      G      |     V     |   V
-  Matrículas   |   G   |      G      |    V*     |   -
+  Matrículas   |   G   |      G      |     -     |   -
   Notas        |   G   |      V      |    G*     |   -
   Relatórios   |   V   |      V      |     V     |   -
   Meu boletim  |   -   |      -      |     -     |   V
@@ -337,7 +342,7 @@ Modelo de dados atual:
   - O menu superior e os atalhos da página inicial mostram só as áreas que o
     papel pode ver:
       Aluno:        Cursos, Disciplinas, Meu boletim
-      Professor:    Meus alunos, Cursos, Disciplinas, Matrículas, Notas, Relatórios
+      Professor:    Meus alunos, Cursos, Disciplinas, Notas, Relatórios
       Coordenador:  Estudantes, Cursos, Disciplinas, Matrículas, Notas, Relatórios
       Admin:        tudo acima (menos Meu boletim) e Usuários
   - O aluno não vê o dashboard de Relatórios, porque ele traz dados de toda a
@@ -479,3 +484,24 @@ Modelo de dados atual:
 
   Para aplicar num banco existente: rode "migrate" e depois o bloco "Contas
   de teste" do Application/Fixtures.sql, que vai até o fim do arquivo.
+
+
+==========================================================================
+11. VÁRIAS DISCIPLINAS POR PROFESSOR (quarta rodada)
+==========================================================================
+
+  - Na página do professor (Usuários -> Ver), o admin marca de uma vez todas
+    as disciplinas que ele ministra (POST /AtribuirDisciplinas?userId).
+    As marcadas passam a ser dele. As que eram dele e foram desmarcadas ficam
+    sem professor. Se a disciplina era de outro professor, a página mostra
+    "(atual: Fulano)" e, ao marcar, a disciplina é transferida. A atribuição
+    individual pelo formulário da disciplina continua disponível.
+  - Regra pura em Escopo.redistribuirDisciplinas: devolve só as disciplinas
+    que mudaram.
+  - "Meus alunos" / "Estudantes": nova coluna Disciplinas e filtro por
+    disciplina (Escopo.alunosComDisciplinas). Para o professor, o filtro
+    lista só as disciplinas dele; um id de disciplina alheia é ignorado.
+  - O professor deixou de ver Matrículas (menu, atalho e acesso direto). O
+    lançamento de notas continua listando os alunos matriculados nas suas
+    disciplinas.
+  - Testes: 99 exemplos, 0 falhas.
