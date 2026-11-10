@@ -45,7 +45,7 @@ disciplina subjectId nome course = newRecord @Subject
     |> set #id subjectId |> set #name nome |> set #courseId course.id |> set #workload 30
 
 funcional, monadas, consultas :: Subject
-funcional = disciplina "00000000-0000-0000-0000-0000000000d1" "Funcional" cursoHaskell
+funcional = disciplina "00000000-0000-0000-0000-0000000000d1" "Funcional" cursoHaskell |> set #professorId (Just professora.id)
 monadas   = disciplina "00000000-0000-0000-0000-0000000000d2" "Mônadas" cursoHaskell
 consultas = disciplina "00000000-0000-0000-0000-0000000000d3" "Consultas" cursoSQL
 
@@ -222,7 +222,50 @@ specs = do
         it "aluno sem matrículas, ou sem mudar o papel, pode ser atualizado" do
             podeTrocarPapel Aluno Professor 0 `shouldBe` True
             podeTrocarPapel Aluno Aluno 3 `shouldBe` True
-            podeTrocarPapel Professor Admin 5 `shouldBe` True
+        it "professor que ministra disciplinas não pode trocar de papel" do
+            podeTrocarPapel Professor Admin 2 `shouldBe` False
+            podeTrocarPapel Professor Admin 0 `shouldBe` True
+            podeTrocarPapel Coordenador Admin 5 `shouldBe` True
+            mensagemTrocaDePapel Professor `shouldSatisfy` ("ministra disciplinas" `Text.isInfixOf`)
+        it "o menu chama Estudantes de \"Meus alunos\" para o professor" do
+            nomeDoRecurso Professor Estudantes `shouldBe` "Meus alunos"
+            nomeDoRecurso Admin Estudantes `shouldBe` "Estudantes"
+
+    describe "escopo do professor (Escopo)" do
+        let outroProfessor = aluno "00000000-0000-0000-0000-0000000000f2" "Otávio" |> set #userRole Professor
+        it "ministra apenas as disciplinas atribuídas a ele" do
+            map (ministra professora) disciplinas `shouldBe` [True, False, False]
+            map (.name) (disciplinasDoProfessor professora disciplinas) `shouldBe` ["Funcional"]
+            ministra (professora |> set #userRole Admin) funcional `shouldBe` False
+        it "disciplinas e cursos visíveis: professor vê os dele, os demais veem tudo" do
+            map (.name) (disciplinasVisiveis professora disciplinas) `shouldBe` ["Funcional"]
+            map (.name) (disciplinasVisiveis outroProfessor disciplinas) `shouldBe` []
+            map (.name) (cursosVisiveis professora disciplinas cursos) `shouldBe` ["Haskell"]
+            length (disciplinasVisiveis (aluno "00000000-0000-0000-0000-0000000000f3" "Admin" |> set #userRole Admin) disciplinas) `shouldBe` 3
+        it "matrículas visíveis: professor só as das suas disciplinas; aluno só as próprias" do
+            matriculasDe (matriculasVisiveis professora detalhadas) `shouldBe` [m1, m2]
+            matriculasDe (matriculasVisiveis outroProfessor detalhadas) `shouldBe` []
+            matriculasDe (matriculasVisiveis bruno detalhadas) `shouldBe` [m2, m3]
+            map (matriculaVisivel professora) detalhadas `shouldBe` [True, True, False]
+        it "alunos visíveis ao professor são os matriculados nas suas disciplinas" do
+            map (.name) (alunosVisiveis professora (matriculasVisiveis professora detalhadas) [ana, bruno]) `shouldBe` ["Ana", "Bruno"]
+            alunosVisiveis outroProfessor (matriculasVisiveis outroProfessor detalhadas) [ana, bruno] `shouldBe` []
+        it "professorValido aceita vazio ou um usuário com papel de professor" do
+            professorValido usuarios Nothing `shouldBe` True
+            professorValido usuarios (Just professora.id) `shouldBe` True
+            professorValido usuarios (Just ana.id) `shouldBe` False
+        it "nomeDoProfessor mostra o responsável ou \"Sem professor\"" do
+            nomeDoProfessor usuarios funcional `shouldBe` "Paula"
+            nomeDoProfessor usuarios consultas `shouldBe` "Sem professor"
+
+    describe "lançamento de notas por disciplina" do
+        it "matriculasDaDisciplina traz os alunos da disciplina em ordem alfabética" do
+            map (\m -> m.aluno.name) (matriculasDaDisciplina funcional.id (reverse detalhadas)) `shouldBe` ["Ana", "Bruno"]
+            matriculasDaDisciplina monadas.id detalhadas `shouldBe` []
+        it "semNotaLancada deixa só os alunos ainda sem notas" do
+            let soAnaComNota = take 1 notasExemplo
+            map (\m -> m.aluno.name) (semNotaLancada soAnaComNota (matriculasDaDisciplina funcional.id detalhadas)) `shouldBe` ["Bruno"]
+            semNotaLancada notasExemplo (matriculasDaDisciplina funcional.id detalhadas) `shouldBe` []
 
     describe "mediaPonderada (currying e closures)" do
         it "compõe a AV com 70% PE + 30% AVf" do
