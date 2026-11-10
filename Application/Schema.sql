@@ -1,6 +1,6 @@
 -- Your database schema. Use the Schema Designer at http://localhost:8001/ to add some tables.
 CREATE TYPE enrollment_status AS ENUM ('ativa', 'trancada', 'concluida');
-CREATE TYPE user_role AS ENUM ('admin', 'coordenador', 'professor', 'aluno');
+CREATE TYPE user_role AS ENUM ('admin', 'professor', 'aluno');
 
 CREATE TABLE courses (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY NOT NULL,
