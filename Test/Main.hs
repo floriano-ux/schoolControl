@@ -194,14 +194,12 @@ specs = do
             and [ podeAcessar Admin op r | op <- [minBound .. maxBound], r <- [minBound .. maxBound], r `notElem` [Boletim, Notas] ] `shouldBe` True
             podeAcessar Admin Visualizar Boletim `shouldBe` False
         it "só o professor lança, edita e exclui notas" do
-            map (\papel -> podeAcessar papel Gerenciar Notas) [Admin, Coordenador, Professor, Aluno]
-                `shouldBe` [False, False, True, False]
+            map (\papel -> podeAcessar papel Gerenciar Notas) [Admin, Professor, Aluno]
+                `shouldBe` [False, True, False]
             podeAcessar Admin Visualizar Notas `shouldBe` True
         it "só o administrador gerencia usuários" do
-            map (\papel -> podeAcessar papel Visualizar Usuarios) [Admin, Coordenador, Professor, Aluno]
-                `shouldBe` [True, False, False, False]
-        it "coordenador vê as notas, mas não as altera" do
-            (podeAcessar Coordenador Visualizar Notas, podeAcessar Coordenador Gerenciar Notas) `shouldBe` (True, False)
+            map (\papel -> podeAcessar papel Visualizar Usuarios) [Admin, Professor, Aluno]
+                `shouldBe` [True, False, False]
         it "professor não acessa a tela de matrículas" do
             (podeAcessar Professor Visualizar Matriculas, podeAcessar Professor Gerenciar Matriculas) `shouldBe` (False, False)
         it "professor lança notas, mas não altera cursos" do
@@ -211,13 +209,15 @@ specs = do
             podeAcessar Aluno Visualizar Relatorios `shouldBe` False
             podeAcessar Aluno Gerenciar Cursos `shouldBe` False
             podeAcessar Aluno Gerenciar Disciplinas `shouldBe` False
+        it "existem apenas os papéis admin, professor e aluno" do
+            ([minBound .. maxBound] :: [UserRole]) `shouldBe` [Admin, Professor, Aluno]
+            map nomeDoPapel [minBound .. maxBound] `shouldBe` ["Administrador", "Professor", "Aluno"]
         it "menu de cada papel da equipe" do
             recursosVisiveis Admin `shouldBe` [Estudantes, Cursos, Disciplinas, Matriculas, Notas, Relatorios, Usuarios]
-            recursosVisiveis Coordenador `shouldBe` [Estudantes, Cursos, Disciplinas, Matriculas, Notas, Relatorios]
             recursosVisiveis Professor `shouldBe` [Estudantes, Cursos, Disciplinas, Notas, Relatorios]
         it "disciplinas seguem as mesmas regras de cursos" do
-            [ podeAcessar papel op Disciplinas | papel <- [Admin, Coordenador, Professor, Aluno], op <- [minBound .. maxBound] ]
-                `shouldBe` [ podeAcessar papel op Cursos | papel <- [Admin, Coordenador, Professor, Aluno], op <- [minBound .. maxBound] ]
+            [ podeAcessar papel op Disciplinas | papel <- [Admin, Professor, Aluno], op <- [minBound .. maxBound] ]
+                `shouldBe` [ podeAcessar papel op Cursos | papel <- [Admin, Professor, Aluno], op <- [minBound .. maxBound] ]
 
     describe "papel de aluno (ehAluno, alunos, podeTrocarPapel)" do
         it "ehAluno e alunos filtram pelo papel" do
@@ -231,7 +231,7 @@ specs = do
         it "professor que ministra disciplinas não pode trocar de papel" do
             podeTrocarPapel Professor Admin 2 `shouldBe` False
             podeTrocarPapel Professor Admin 0 `shouldBe` True
-            podeTrocarPapel Coordenador Admin 5 `shouldBe` True
+            podeTrocarPapel Admin Professor 5 `shouldBe` True
             mensagemTrocaDePapel Professor `shouldSatisfy` ("ministra disciplinas" `Text.isInfixOf`)
         it "o menu chama Estudantes de \"Meus alunos\" para o professor" do
             nomeDoRecurso Professor Estudantes `shouldBe` "Meus alunos"

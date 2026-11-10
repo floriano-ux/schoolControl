@@ -32,37 +32,32 @@ data Operacao
     | Gerenciar
     deriving (Eq, Show, Enum, Bounded)
 
---   Recurso      | Admin | Coordenador | Professor | Aluno
---   -------------+-------+-------------+-----------+-------
---   Estudantes   |   G   |      G      |    V*     |   -
---   Cursos       |   G   |      G      |     V     |   V
---   Disciplinas  |   G   |      G      |     V     |   V
---   Matrículas   |   G   |      G      |     -     |   -
---   Notas        |   V   |      V      |    G*     |   -
---   Relatórios   |   V   |      V      |     V     |   -
---   Boletim      |   -   |      -      |     -     |   V
---   Usuários     |   G   |      -      |     -     |   -
+--   Recurso      | Admin | Professor | Aluno
+--   -------------+-------+-----------+-------
+--   Estudantes   |   G   |    V*     |   -
+--   Cursos       |   G   |     V     |   V
+--   Disciplinas  |   G   |     V     |   V
+--   Matrículas   |   G   |     -     |   -
+--   Notas        |   V   |    G*     |   -
+--   Relatórios   |   V   |     V     |   -
+--   Boletim      |   -   |     -     |   V
+--   Usuários     |   G   |     -     |   -
 --
 -- (G = gerenciar, que inclui visualizar; V = só visualizar)
 -- (*) O professor só enxerga alunos, notas e relatórios das disciplinas que ministra (ver Escopo).
 -- Relatórios mostram dados de toda a instituição; o aluno vê apenas o próprio boletim.
+-- Lançar notas é exclusivo do professor: o admin só visualiza.
 podeAcessar :: UserRole -> Operacao -> Recurso -> Bool
--- Lançar notas é exclusivo do professor: admin e coordenador só visualizam.
 podeAcessar Admin operacao recurso = case recurso of
     Boletim -> False
     Notas   -> operacao == Visualizar
     _       -> True
-podeAcessar Coordenador operacao recurso = case recurso of
-    Usuarios -> False
-    Boletim  -> False
-    Notas    -> operacao == Visualizar
-    _        -> True
 podeAcessar Professor operacao recurso = case recurso of
     Usuarios   -> False
     Boletim    -> False
     Matriculas -> False
-    Notas    -> True
-    _        -> operacao == Visualizar
+    Notas      -> True
+    _          -> operacao == Visualizar
 podeAcessar Aluno operacao recurso =
     operacao == Visualizar && recurso `elem` [Cursos, Disciplinas, Boletim]
 
@@ -72,10 +67,9 @@ recursosVisiveis papel = filter (podeAcessar papel Visualizar) [minBound .. maxB
 
 nomeDoPapel :: UserRole -> Text
 nomeDoPapel papel = case papel of
-    Admin       -> "Administrador"
-    Coordenador -> "Coordenador"
-    Professor   -> "Professor"
-    Aluno       -> "Aluno"
+    Admin     -> "Administrador"
+    Professor -> "Professor"
+    Aluno     -> "Aluno"
 
 ehAluno :: User -> Bool
 ehAluno u = u.userRole == Aluno
