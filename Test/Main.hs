@@ -7,6 +7,9 @@ import Generated.Types
 import Application.Domain
 import Application.Security
 import Application.Security.GeradorSenha
+import Application.UseCase.CadastrarAluno
+import Control.Monad.State (State, runState)
+import qualified Control.Monad.State as State
 import qualified Data.Text as Text
 import System.IO (hSetEncoding, stdout, stderr, utf8)
 
@@ -29,18 +32,46 @@ cursoHaskell, cursoSQL :: Course
 cursoHaskell = newRecord @Course |> set #id "00000000-0000-0000-0000-0000000000c1" |> set #name "Haskell" |> set #workload 60
 cursoSQL     = newRecord @Course |> set #id "00000000-0000-0000-0000-0000000000c2" |> set #name "SQL" |> set #workload 40
 
-ana, bruno :: Student
-ana   = newRecord @Student |> set #id "00000000-0000-0000-0000-0000000000a1" |> set #name "Ana"
-bruno = newRecord @Student |> set #id "00000000-0000-0000-0000-0000000000b1" |> set #name "Bruno"
+aluno :: Id User -> Text -> User
+aluno userId nome = newRecord @User |> set #id userId |> set #name nome |> set #userRole Aluno
 
-matricula :: Id Enrollment -> Student -> Course -> EnrollmentStatus -> Enrollment
-matricula matriculaId student course status = newRecord @Enrollment
-    |> set #id matriculaId |> set #studentId student.id |> set #courseId course.id |> set #status status
+ana, bruno, professora :: User
+ana        = aluno "00000000-0000-0000-0000-0000000000a1" "Ana"
+bruno      = aluno "00000000-0000-0000-0000-0000000000b1" "Bruno"
+professora = aluno "00000000-0000-0000-0000-0000000000f1" "Paula" |> set #userRole Professor
+
+disciplina :: Id Subject -> Text -> Course -> Subject
+disciplina subjectId nome course = newRecord @Subject
+    |> set #id subjectId |> set #name nome |> set #courseId course.id |> set #workload 30
+
+funcional, monadas, consultas :: Subject
+funcional = disciplina "00000000-0000-0000-0000-0000000000d1" "Funcional" cursoHaskell
+monadas   = disciplina "00000000-0000-0000-0000-0000000000d2" "Mônadas" cursoHaskell
+consultas = disciplina "00000000-0000-0000-0000-0000000000d3" "Consultas" cursoSQL
+
+usuarios :: [User]
+usuarios = [ana, bruno, professora]
+
+disciplinas :: [Subject]
+disciplinas = [funcional, monadas, consultas]
+
+cursos :: [Course]
+cursos = [cursoHaskell, cursoSQL]
+
+matricula :: Id Enrollment -> User -> Subject -> EnrollmentStatus -> Enrollment
+matricula matriculaId user subject status = newRecord @Enrollment
+    |> set #id matriculaId |> set #studentId user.id |> set #subjectId subject.id |> set #status status
 
 m1, m2, m3 :: Enrollment
-m1 = matricula "00000000-0000-0000-0000-0000000000e1" ana cursoHaskell Ativa
-m2 = matricula "00000000-0000-0000-0000-0000000000e2" bruno cursoHaskell Ativa
-m3 = matricula "00000000-0000-0000-0000-0000000000e3" bruno cursoSQL Trancada
+m1 = matricula "00000000-0000-0000-0000-0000000000e1" ana funcional Ativa
+m2 = matricula "00000000-0000-0000-0000-0000000000e2" bruno funcional Ativa
+m3 = matricula "00000000-0000-0000-0000-0000000000e3" bruno consultas Trancada
+
+detalhadas :: [MatriculaDetalhada]
+detalhadas = detalharMatriculas usuarios disciplinas cursos [m1, m2, m3]
+
+matriculasDe :: [MatriculaDetalhada] -> [Enrollment]
+matriculasDe = map (.matricula)
 
 -- Ana tira 9 em tudo (NF 9); Bruno tira 6 em tudo (NF 6). Ninguém tem nota em SQL.
 notasExemplo :: [Grade]
@@ -62,15 +93,27 @@ specs = do
             mensagemDeErro (NotaForaDoIntervalo "pe1" 11) `shouldBe` "A nota deve estar entre 0 e 10"
 
     describe "relatórios (map, filter, fold, concatMap)" do
+        it "detalharMatriculas cruza matrícula, aluno, disciplina e curso" do
+            map (\m -> (m.aluno.name, m.disciplina.name, m.curso.name)) detalhadas
+                `shouldBe` [("Ana", "Funcional", "Haskell"), ("Bruno", "Funcional", "Haskell"), ("Bruno", "Consultas", "SQL")]
+        it "detalharMatriculas descarta matrículas sem disciplina correspondente" do
+            detalharMatriculas usuarios [funcional] cursos [m1, m3] `shouldSatisfy` ((== 1) . length)
         it "mediaPorCurso calcula a média das NFs e devolve Nothing para curso sem notas" do
-            mediaPorCurso [cursoHaskell, cursoSQL] [m1, m2, m3] notasExemplo
+            mediaPorCurso [cursoHaskell, cursoSQL] detalhadas notasExemplo
                 `shouldBe` [("Haskell", Just 7.5), ("SQL", Nothing)]
+        it "mediaPorDisciplina rotula como \"Disciplina (Curso)\" e devolve Nothing sem notas" do
+            mediaPorDisciplina (disciplinasComCurso cursos disciplinas) detalhadas notasExemplo
+                `shouldBe` [("Funcional (Haskell)", Just 7.5), ("Mônadas (Haskell)", Nothing), ("Consultas (SQL)", Nothing)]
         it "rankingDeAlunos ordena pela média, da maior para a menor" do
-            rankingDeAlunos [bruno, ana] [m1, m2, m3] notasExemplo
+            rankingDeAlunos (reverse detalhadas) notasExemplo
                 `shouldBe` [(1, "Ana", 9), (2, "Bruno", 6)]
         it "alunosPorCurso ignora matrículas trancadas e ordena os nomes" do
-            alunosPorCurso [cursoHaskell, cursoSQL] [bruno, ana] [m1, m2, m3]
+            alunosPorCurso [cursoHaskell, cursoSQL] detalhadas
                 `shouldBe` [("Haskell", ["Ana", "Bruno"]), ("SQL", [])]
+        it "alunosPorCurso não repete o aluno matriculado em duas disciplinas do curso" do
+            let extra = matricula "00000000-0000-0000-0000-0000000000e9" ana monadas Ativa
+            alunosPorCurso [cursoHaskell] (detalharMatriculas usuarios disciplinas cursos [m1, m2, extra])
+                `shouldBe` [("Haskell", ["Ana", "Bruno"])]
         it "contarPorSituacao conta cada situação com foldl'" do
             contarPorSituacao [("Ana", 9, Aprovado), ("Bruno", 6, Aprovado), ("Caio", 3, Reprovado)]
                 `shouldBe` [(Aprovado, 2), (AguardandoAV3, 0), (Reprovado, 1), (Trancado, 0)]
@@ -78,54 +121,61 @@ specs = do
             cargaHorariaTotal [cursoHaskell, cursoSQL] `shouldBe` 100
             cargaHorariaTotal [] `shouldBe` 0
 
-    describe "filtros do relatório (FiltroRelatorio, filtrarPorCurso, filtrarPorStatus)" do
+    describe "filtros do relatório (FiltroRelatorio, filtrarPorCurso, filtrarPorDisciplina, filtrarPorStatus)" do
         it "filtrarPorCurso filtra matrículas pelo Id do curso quando Just" do
-            filtrarPorCurso (Just cursoHaskell.id) [m1, m2, m3] `shouldBe` [m1, m2]
-            filtrarPorCurso (Just cursoSQL.id) [m1, m2, m3] `shouldBe` [m3]
+            matriculasDe (filtrarPorCurso (Just cursoHaskell.id) detalhadas) `shouldBe` [m1, m2]
+            matriculasDe (filtrarPorCurso (Just cursoSQL.id) detalhadas) `shouldBe` [m3]
         it "filtrarPorCurso mantém todas as matrículas quando Nothing" do
-            filtrarPorCurso Nothing [m1, m2, m3] `shouldBe` [m1, m2, m3]
+            matriculasDe (filtrarPorCurso Nothing detalhadas) `shouldBe` [m1, m2, m3]
+        it "filtrarPorDisciplina filtra matrículas pelo Id da disciplina" do
+            matriculasDe (filtrarPorDisciplina (Just consultas.id) detalhadas) `shouldBe` [m3]
+            matriculasDe (filtrarPorDisciplina (Just monadas.id) detalhadas) `shouldBe` []
+            matriculasDe (filtrarPorDisciplina Nothing detalhadas) `shouldBe` [m1, m2, m3]
         it "filtrarPorStatus filtra pelo status quando Just" do
-            filtrarPorStatus (Just Ativa) [m1, m2, m3] `shouldBe` [m1, m2]
-            filtrarPorStatus (Just Trancada) [m1, m2, m3] `shouldBe` [m3]
-            filtrarPorStatus (Just Concluida) [m1, m2, m3] `shouldBe` []
+            matriculasDe (filtrarPorStatus (Just Ativa) detalhadas) `shouldBe` [m1, m2]
+            matriculasDe (filtrarPorStatus (Just Trancada) detalhadas) `shouldBe` [m3]
+            matriculasDe (filtrarPorStatus (Just Concluida) detalhadas) `shouldBe` []
         it "filtrarPorStatus mantém todas as matrículas quando Nothing" do
-            filtrarPorStatus Nothing [m1, m2, m3] `shouldBe` [m1, m2, m3]
-        it "aplicarFiltro combina curso e status via record FiltroRelatorio" do
-            let filtroHaskellAtiva = FiltroRelatorio (Just cursoHaskell.id) (Just Ativa)
-            aplicarFiltro filtroHaskellAtiva [m1, m2, m3] `shouldBe` [m1, m2]
-
-            let filtroHaskellTrancada = FiltroRelatorio (Just cursoHaskell.id) (Just Trancada)
-            aplicarFiltro filtroHaskellTrancada [m1, m2, m3] `shouldBe` []
-
-            let filtroSQLTrancada = FiltroRelatorio (Just cursoSQL.id) (Just Trancada)
-            aplicarFiltro filtroSQLTrancada [m1, m2, m3] `shouldBe` [m3]
-
-            let filtroVazio' = FiltroRelatorio Nothing Nothing
-            aplicarFiltro filtroVazio' [m1, m2, m3] `shouldBe` [m1, m2, m3]
+            matriculasDe (filtrarPorStatus Nothing detalhadas) `shouldBe` [m1, m2, m3]
+        it "aplicarFiltro combina curso, disciplina e status via record FiltroRelatorio" do
+            let filtrar cursoId disciplinaId status = matriculasDe (aplicarFiltro (FiltroRelatorio cursoId disciplinaId status) detalhadas)
+            filtrar (Just cursoHaskell.id) Nothing (Just Ativa) `shouldBe` [m1, m2]
+            filtrar (Just cursoHaskell.id) Nothing (Just Trancada) `shouldBe` []
+            filtrar (Just cursoSQL.id) Nothing (Just Trancada) `shouldBe` [m3]
+            filtrar Nothing (Just funcional.id) Nothing `shouldBe` [m1, m2]
+            filtrar (Just cursoSQL.id) (Just funcional.id) Nothing `shouldBe` []
+            filtrar Nothing Nothing Nothing `shouldBe` [m1, m2, m3]
+        it "filtrarDisciplinas respeita os filtros de curso e de disciplina" do
+            let pares = disciplinasComCurso cursos disciplinas
+                nomes filtro = map (\(s, _) -> s.name) (filtrarDisciplinas filtro pares)
+            nomes filtroVazio `shouldBe` ["Funcional", "Mônadas", "Consultas"]
+            nomes filtroVazio { cursoId = Just cursoHaskell.id } `shouldBe` ["Funcional", "Mônadas"]
+            nomes filtroVazio { disciplinaId = Just consultas.id } `shouldBe` ["Consultas"]
         it "agregações passam a receber a lista já filtrada (reuso das funções atuais)" do
-            let matriculasHaskell = filtrarPorCurso (Just cursoHaskell.id) [m1, m2, m3]
+            let matriculasHaskell = filtrarPorCurso (Just cursoHaskell.id) detalhadas
             mediaPorCurso [cursoHaskell] matriculasHaskell notasExemplo
                 `shouldBe` [("Haskell", Just 7.5)]
-            rankingDeAlunos [ana, bruno] matriculasHaskell notasExemplo
+            rankingDeAlunos matriculasHaskell notasExemplo
                 `shouldBe` [(1, "Ana", 9.0), (2, "Bruno", 6.0)]
 
             -- Com apenas SQL, Bruno tem matrícula trancada e sem notas
-            let matriculasSQL = filtrarPorCurso (Just cursoSQL.id) [m1, m2, m3]
-            rankingDeAlunos [ana, bruno] matriculasSQL notasExemplo `shouldBe` []
+            let matriculasSQL = filtrarPorCurso (Just cursoSQL.id) detalhadas
+            rankingDeAlunos matriculasSQL notasExemplo `shouldBe` []
 
             -- Boletim com apenas matrículas ativas de Haskell
-            let ativasHaskell = aplicarFiltro (FiltroRelatorio (Just cursoHaskell.id) (Just Ativa)) [m1, m2, m3]
-            map (\(nome, media, sit) -> (nome, media, sit)) (boletim [ana, bruno] ativasHaskell notasExemplo)
+            let ativasHaskell = aplicarFiltro (FiltroRelatorio (Just cursoHaskell.id) Nothing (Just Ativa)) detalhadas
+            boletim ativasHaskell notasExemplo
                 `shouldBe` [("Ana", 9.0, Aprovado), ("Bruno", 6.0, Aprovado)]
         it "taxaAprovacao calcula percentual ou Nothing se lista vazia" do
-            let linhas = boletim [ana, bruno] [m1, m2] notasExemplo
+            let linhas = boletim (take 2 detalhadas) notasExemplo
             taxaAprovacao linhas `shouldBe` Just 100.0
             taxaAprovacao [] `shouldBe` Nothing
         it "totalMatriculasAtivas e totalAlunosFiltrados calculam KPIs puros" do
-            totalMatriculasAtivas [m1, m2, m3] `shouldBe` 2
-            totalMatriculasAtivas [m3] `shouldBe` 0
-            totalAlunosFiltrados filtroVazio [ana, bruno] [m1, m2, m3] `shouldBe` 2
-            totalAlunosFiltrados (FiltroRelatorio (Just cursoSQL.id) Nothing) [ana, bruno] [m3] `shouldBe` 1
+            totalMatriculasAtivas detalhadas `shouldBe` 2
+            totalMatriculasAtivas (drop 2 detalhadas) `shouldBe` 0
+            totalAlunosFiltrados filtroVazio (alunos usuarios) detalhadas `shouldBe` 2
+            let filtroSQL = filtroVazio { cursoId = Just cursoSQL.id }
+            totalAlunosFiltrados filtroSQL (alunos usuarios) (aplicarFiltro filtroSQL detalhadas) `shouldBe` 1
         it "parseStatus faz parse case-insensitive ou devolve Nothing" do
             parseStatus "ativa" `shouldBe` Just Ativa
             parseStatus "Ativa" `shouldBe` Just Ativa
@@ -142,9 +192,24 @@ specs = do
             (podeAcessar Coordenador Visualizar Notas, podeAcessar Coordenador Gerenciar Notas) `shouldBe` (True, False)
         it "professor lança notas, mas não altera cursos" do
             (podeAcessar Professor Gerenciar Notas, podeAcessar Professor Gerenciar Cursos) `shouldBe` (True, False)
-        it "aluno só visualiza cursos e relatórios" do
-            recursosVisiveis Aluno `shouldBe` [Cursos, Relatorios]
+        it "aluno só visualiza cursos, disciplinas e relatórios" do
+            recursosVisiveis Aluno `shouldBe` [Cursos, Disciplinas, Relatorios]
             podeAcessar Aluno Gerenciar Cursos `shouldBe` False
+            podeAcessar Aluno Gerenciar Disciplinas `shouldBe` False
+        it "disciplinas seguem as mesmas regras de cursos" do
+            [ podeAcessar papel op Disciplinas | papel <- [Admin, Coordenador, Professor, Aluno], op <- [minBound .. maxBound] ]
+                `shouldBe` [ podeAcessar papel op Cursos | papel <- [Admin, Coordenador, Professor, Aluno], op <- [minBound .. maxBound] ]
+
+    describe "papel de aluno (ehAluno, alunos, podeTrocarPapel)" do
+        it "ehAluno e alunos filtram pelo papel" do
+            map ehAluno usuarios `shouldBe` [True, True, False]
+            map (.name) (alunos usuarios) `shouldBe` ["Ana", "Bruno"]
+        it "aluno com matrículas não pode trocar de papel" do
+            podeTrocarPapel Aluno Professor 2 `shouldBe` False
+        it "aluno sem matrículas, ou sem mudar o papel, pode ser atualizado" do
+            podeTrocarPapel Aluno Professor 0 `shouldBe` True
+            podeTrocarPapel Aluno Aluno 3 `shouldBe` True
+            podeTrocarPapel Professor Admin 5 `shouldBe` True
 
     describe "mediaPonderada (currying e closures)" do
         it "compõe a AV com 70% PE + 30% AVf" do
@@ -195,28 +260,23 @@ specs = do
         it "valida todas as notas de uma Grade" do
             validarGrade (nota 7 7 Nothing |> set #pe2 (-1) |> set #pe3 (Just 12))
                 `shouldBe` [NotaForaDoIntervalo "pe2" (-1), NotaForaDoIntervalo "pe3" 12]
-        it "valida nome e e-mail do estudante" do
-            let student = newRecord @Student |> set #name " " |> set #email "ana.com"
-            validarStudent student `shouldBe` [CampoVazio "name", EmailInvalido "ana.com"]
-            validarStudent (student |> set #name "Ana" |> set #email "ana@unifor.br")
-                `shouldBe` []
         it "valida carga horária do curso" do
             let course = newRecord @Course |> set #name "Haskell" |> set #workload 0
             validarCourse course `shouldBe` [CargaHorariaInvalida 0]
+        it "valida nome e carga horária da disciplina" do
+            let subject = newRecord @Subject |> set #name " " |> set #workload 0
+            validarSubject subject `shouldBe` [CampoVazio "name", CargaHorariaInvalida 0]
+            validarSubject (subject |> set #name "Mônadas" |> set #workload 20) `shouldBe` []
 
     describe "coleções (list comprehensions)" do
-        let ana    = newRecord @Student |> set #id "11111111-1111-1111-1111-111111111111" |> set #name "Ana"
-            bruno  = newRecord @Student |> set #id "22222222-2222-2222-2222-222222222222" |> set #name "Bruno"
-            curso  = newRecord @Course  |> set #id "33333333-3333-3333-3333-333333333333" |> set #name "Haskell"
-            matAna   = newRecord @Enrollment
-                |> set #id "44444444-4444-4444-4444-444444444444"
-                |> set #studentId ana.id |> set #courseId curso.id |> set #status Ativa
-            matBruno = newRecord @Enrollment
-                |> set #id "55555555-5555-5555-5555-555555555555"
-                |> set #studentId bruno.id |> set #courseId curso.id |> set #status Trancada
+        let curso    = newRecord @Course |> set #id "33333333-3333-3333-3333-333333333333" |> set #name "Haskell"
+            subject  = disciplina "66666666-6666-6666-6666-666666666666" "Funcional" curso
+            matAna   = matricula "44444444-4444-4444-4444-444444444444" ana subject Ativa
+            matBruno = matricula "55555555-5555-5555-5555-555555555555" bruno subject Trancada
             notaAna   = nota 8 9 (Just 7) |> set #enrollmentId matAna.id
             notaBruno = nota 3 3 Nothing |> set #enrollmentId matBruno.id
-            linhas = boletim [ana, bruno] [matAna, matBruno] [notaAna, notaBruno]
+            turma  = detalharMatriculas [ana, bruno] [subject] [curso] [matAna, matBruno]
+            linhas = boletim turma [notaAna, notaBruno]
 
         it "monta o boletim cruzando alunos, matrículas e notas" do
             map (\(nome, _, situacao) -> (nome, situacao)) linhas
@@ -224,7 +284,7 @@ specs = do
         it "filtra os aprovados" do
             nomesAprovados linhas `shouldBe` ["Ana"]
         it "conta matrículas ativas por curso" do
-            matriculasAtivasPorCurso [curso] [matAna, matBruno] `shouldBe` [("Haskell", 1)]
+            matriculasAtivasPorCurso [curso] turma `shouldBe` [("Haskell", 1)]
 
     describe "mediaDaTurma (recursão em cauda)" do
         it "calcula a média" do
@@ -266,33 +326,38 @@ specs = do
                 `shouldBe` "erro: Este e-mail já está em uso. Que tal nicolly1@unifor.br?"
 
     describe "pipelineMatriculaCPS (Continuation Passing Style no fluxo de matrícula)" do
-        let novaMatricula = matricula "00000000-0000-0000-0000-0000000000e4" ana cursoSQL Ativa
-            executa m ss cs es = pipelineMatriculaCPS m ss cs es (\err -> "erro: " <> mensagemErroMatricula err) (const "ok")
+        let novaMatricula = matricula "00000000-0000-0000-0000-0000000000e4" ana consultas Ativa
+            executa m es = pipelineMatriculaCPS m usuarios disciplinas es (\err -> "erro: " <> mensagemErroMatricula err) (const "ok")
 
-        it "invoca onSucesso quando aluno e curso existem e não há duplicidade" do
-            executa novaMatricula [ana, bruno] [cursoHaskell, cursoSQL] [m1, m2] `shouldBe` "ok"
+        it "invoca onSucesso quando aluno e disciplina existem e não há duplicidade" do
+            executa novaMatricula [m1, m2] `shouldBe` "ok"
 
         it "aborta com AlunoNaoEncontrado quando o aluno não está cadastrado" do
-            let alunoInexistente = newRecord @Student |> set #id "00000000-0000-0000-0000-000000000099"
-                mInvalida = matricula "00000000-0000-0000-0000-0000000000e4" alunoInexistente cursoSQL Ativa
-            executa mInvalida [ana, bruno] [cursoHaskell, cursoSQL] []
+            let inexistente = aluno "00000000-0000-0000-0000-000000000099" "Fantasma"
+            executa (matricula "00000000-0000-0000-0000-0000000000e4" inexistente consultas Ativa) []
                 `shouldBe` "erro: Selecione um aluno válido"
 
-        it "aborta com CursoNaoEncontrado quando o curso não está cadastrado" do
-            let cursoInexistente = newRecord @Course |> set #id "00000000-0000-0000-0000-000000000099"
-                mInvalida = matricula "00000000-0000-0000-0000-0000000000e4" ana cursoInexistente Ativa
-            executa mInvalida [ana, bruno] [cursoHaskell, cursoSQL] []
-                `shouldBe` "erro: Selecione um curso válido"
+        it "aborta com UsuarioNaoEhAluno quando o usuário tem outro papel" do
+            executa (matricula "00000000-0000-0000-0000-0000000000e4" professora consultas Ativa) []
+                `shouldBe` "erro: O usuário selecionado não é um aluno"
 
-        it "aborta com MatriculaDuplicada quando o aluno já possui matrícula no curso" do
-            -- m1 é matrícula de Ana no cursoHaskell
-            let mDuplicada = matricula "00000000-0000-0000-0000-0000000000e5" ana cursoHaskell Ativa
-            executa mDuplicada [ana, bruno] [cursoHaskell, cursoSQL] [m1]
-                `shouldBe` "erro: Este aluno já está matriculado neste curso"
+        it "aborta com DisciplinaNaoEncontrada quando a disciplina não está cadastrada" do
+            let inexistente = disciplina "00000000-0000-0000-0000-000000000099" "Fantasma" cursoSQL
+            executa (matricula "00000000-0000-0000-0000-0000000000e4" ana inexistente Ativa) []
+                `shouldBe` "erro: Selecione uma disciplina válida"
+
+        it "aborta com MatriculaDuplicada quando o aluno já possui matrícula na disciplina" do
+            let mDuplicada = matricula "00000000-0000-0000-0000-0000000000e5" ana funcional Ativa
+            executa mDuplicada [m1] `shouldBe` "erro: Este aluno já está matriculado nesta disciplina"
+
+        it "permite matrícula do mesmo aluno em outra disciplina do mesmo curso" do
+            executa (matricula "00000000-0000-0000-0000-0000000000e6" ana monadas Ativa) [m1] `shouldBe` "ok"
 
         it "permite validação em CPS retornando Either diretamente via continuações" do
-            pipelineMatriculaCPS novaMatricula [ana, bruno] [cursoHaskell, cursoSQL] [m1, m2] Left Right
+            pipelineMatriculaCPS novaMatricula usuarios disciplinas [m1, m2] Left Right
                 `shouldBe` Right novaMatricula
+            pipelineMatriculaCPS (novaMatricula |> set #studentId professora.id) usuarios disciplinas [] Left Right
+                `shouldBe` (Left UsuarioNaoEhAluno :: Either ErroMatricula Enrollment)
 
     describe "avaliação preguiçosa (variacoesDeEmail / primeiroEmailLivre)" do
         it "gera variações sufixadas do e-mail" do
@@ -334,3 +399,31 @@ specs = do
             montarSenha 12 (replicate 200 255) `shouldBe` Nothing
         it "usa o tamanho mínimo de 12 caracteres para senhas geradas" do
             tamanhoSenhaGerada configPadrao `shouldBe` 12
+
+    describe "cadastrarAluno (caso de uso com portas falsas em State)" do
+        let executa existentes dados = runState (cadastrarAluno (portasFalsas existentes) dados) []
+        it "cria o aluno, devolve a senha e persiste apenas o hash" do
+            let (resultado, persistidos) = executa [] (NovoAluno "  Ana  " "ana@unifor.br")
+            fmap (\(user, senha) -> (user.name, user.userRole, user.passwordHash, senha)) resultado
+                `shouldBe` Right ("Ana", Aluno, "hash:Gerada123x", "Gerada123x")
+            persistidos `shouldBe` [("ana@unifor.br", "hash:Gerada123x")]
+        it "recusa e-mail já cadastrado sem persistir nada" do
+            let (resultado, persistidos) = executa ["ana@unifor.br"] (NovoAluno "Ana" "ana@unifor.br")
+            fmap (const ()) resultado `shouldBe` Left EmailJaCadastrado
+            persistidos `shouldBe` []
+        it "valida nome e e-mail antes de consultar as portas" do
+            fmap (const ()) (fst (executa [] (NovoAluno " " "ana@unifor.br"))) `shouldBe` Left NomeVazio
+            fmap (const ()) (fst (executa [] (NovoAluno "Ana" "ana.unifor.br"))) `shouldBe` Left EmailInvalidoAluno
+        it "tem mensagens em português para cada erro" do
+            map mensagemErroCadastroAluno [NomeVazio, EmailInvalidoAluno, EmailJaCadastrado]
+                `shouldBe` ["Informe o nome do estudante", "Informe um e-mail válido", "Este e-mail já está cadastrado"]
+
+portasFalsas :: [Text] -> PortasCadastroAluno (State [(Text, Text)])
+portasFalsas existentes = PortasCadastroAluno
+    { emailJaExiste = \email -> pure (email `elem` existentes)
+    , gerarSenha    = pure "Gerada123x"
+    , gerarHash     = \senha -> pure ("hash:" <> senha)
+    , persistir     = \novo hash -> do
+        State.modify ((novo.email, hash) :)
+        pure (aluno "00000000-0000-0000-0000-0000000000a9" novo.nome |> set #email novo.email |> set #passwordHash hash)
+    }
