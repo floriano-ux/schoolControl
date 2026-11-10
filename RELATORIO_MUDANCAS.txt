@@ -221,6 +221,9 @@ Modelo de dados atual:
     sua carga horária.
   - Matrículas: liga um aluno a uma disciplina e tem status ativa, trancada ou
     concluída. Na edição só o status muda.
+  - Lançar notas (professor e admin), em etapas: 1) escolher a disciplina
+    (o professor vê só as que ministra); 2) escolher o aluno matriculado nela
+    que ainda não tem notas; 3) preencher PE/AVf.
   - Notas: uma linha de notas por matrícula. O sistema calcula AV1, AV2, AV3,
     a NF, a situação e o conceito.
   - Meu boletim (só aluno, /MeuBoletim): disciplinas em que o aluno está
@@ -259,6 +262,10 @@ Modelo de dados atual:
   - Só pode haver um lançamento de notas por matrícula.
 
 5.2 Cursos e disciplinas
+  - Cada disciplina pode ter um professor responsável, atribuído por admin ou
+    coordenador no cadastro da disciplina. O professor é opcional, mas, se
+    informado, precisa ter papel de professor. Se o usuário for excluído, a
+    disciplina fica sem professor.
   - O nome é obrigatório e a carga horária precisa ser maior que zero.
   - O nome da disciplina é único dentro do curso (sem diferenciar maiúsculas
     no formulário).
@@ -275,7 +282,23 @@ Modelo de dados atual:
   - Um aluno com matrículas não pode ter o papel trocado (podeTrocarPapel).
   - Excluir um aluno apaga as matrículas e as notas dele.
 
-5.4 Matrícula (pipeline CPS, nesta ordem)
+5.4 Escopo do professor
+  - O professor só vê alunos, matrículas, notas e relatórios das disciplinas
+    que ministra. Fora desse escopo, a página responde 404.
+  - O professor só lança, edita e exclui notas das suas disciplinas.
+  - Um professor que ministra disciplinas não pode trocar de papel. A regra
+    vale também para o aluno com matrículas (podeTrocarPapel).
+
+5.4.1 Lançamento de notas
+  - A disciplina é escolhida primeiro. Depois aparecem só os alunos
+    matriculados nela que ainda não têm notas.
+  - No servidor, o aluno enviado precisa estar matriculado na disciplina
+    escolhida e dentro do escopo do usuário; senão aparece "Selecione um aluno
+    matriculado nesta disciplina".
+  - Na edição, a disciplina fica fixa e o aluno só pode ser trocado por outro
+    da mesma disciplina.
+
+5.5 Matrícula (pipeline CPS, nesta ordem)
   1. O aluno selecionado existe           -> senão "Selecione um aluno válido"
   2. O usuário tem papel aluno            -> senão "O usuário selecionado não é um aluno"
   3. A disciplina existe                  -> senão "Selecione uma disciplina válida"
@@ -302,18 +325,19 @@ Modelo de dados atual:
 5.7 Permissões (G = gerenciar, V = só visualizar, - = sem acesso)
   Recurso      | Admin | Coordenador | Professor | Aluno
   -------------+-------+-------------+-----------+------
-  Estudantes   |   G   |      G      |     V     |   -
+  Estudantes   |   G   |      G      |    V*     |   -
   Cursos       |   G   |      G      |     V     |   V
   Disciplinas  |   G   |      G      |     V     |   V
-  Matrículas   |   G   |      G      |     V     |   -
-  Notas        |   G   |      V      |     G     |   -
+  Matrículas   |   G   |      G      |    V*     |   -
+  Notas        |   G   |      V      |    G*     |   -
   Relatórios   |   V   |      V      |     V     |   -
   Meu boletim  |   -   |      -      |     -     |   V
+  (*) só das disciplinas que o professor ministra
   Usuários     |   G   |      -      |     -     |   -
   - O menu superior e os atalhos da página inicial mostram só as áreas que o
     papel pode ver:
       Aluno:        Cursos, Disciplinas, Meu boletim
-      Professor:    Estudantes, Cursos, Disciplinas, Matrículas, Notas, Relatórios
+      Professor:    Meus alunos, Cursos, Disciplinas, Matrículas, Notas, Relatórios
       Coordenador:  Estudantes, Cursos, Disciplinas, Matrículas, Notas, Relatórios
       Admin:        tudo acima (menos Meu boletim) e Usuários
   - O aluno não vê o dashboard de Relatórios, porque ele traz dados de toda a
@@ -425,3 +449,33 @@ Modelo de dados atual:
   já existe, rode apenas o bloco "Contas de teste" do Fixtures.sql no psql.
   O bloco usa ON CONFLICT (email) DO NOTHING, então pode ser rodado mais de
   uma vez.
+
+
+==========================================================================
+10. PROFESSOR POR DISCIPLINA E LANÇAMENTO DE NOTAS (terceira rodada)
+==========================================================================
+
+  - Banco: nova coluna subjects.professor_id (opcional, FK para users com
+    ON DELETE SET NULL, com índice). Migração:
+    Application/Migration/1794336897-professor-da-disciplina.sql.
+  - Admin e coordenador: o formulário de disciplina tem o campo "Professor
+    responsável" (só usuários com papel professor). A listagem e o detalhe da
+    disciplina mostram o professor, e a página do usuário professor lista as
+    disciplinas que ele ministra.
+  - Novo módulo Application/Domain/Escopo.hs (funções puras): ministra,
+    disciplinasVisiveis, cursosVisiveis, matriculasVisiveis, alunosVisiveis,
+    matriculaVisivel, matriculasDaDisciplina, semNotaLancada, professorValido
+    e nomeDoProfessor.
+  - Professor: "Estudantes" virou "Meus alunos" e lista só os alunos das suas
+    disciplinas. Matrículas, Notas e Relatórios também ficam restritos às
+    suas disciplinas. Abrir um aluno, matrícula ou nota de fora responde 404.
+  - Lançar notas: primeiro a disciplina, depois o aluno (matriculado e sem
+    nota), depois as notas. A disciplina escolhida volta junto com o
+    formulário, então ela continua selecionada quando há erro de validação.
+  - Fixtures: o curso "Programação Funcional" tem as disciplinas "Haskell"
+    (professor Ruan, com Floriano matriculado) e "Banco de Dados" (sem
+    professor). A inserção pode ser rodada mais de uma vez.
+  - Testes: 95 exemplos, 0 falhas.
+
+  Para aplicar num banco existente: rode "migrate" e depois o bloco "Contas
+  de teste" do Application/Fixtures.sql, que vai até o fim do arquivo.
