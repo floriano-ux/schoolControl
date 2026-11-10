@@ -1,0 +1,385 @@
+RELATÓRIO DE MUDANÇAS — SCHOOL CONTROL
+Branch: refactor/arquitetura-limpa-disciplinas (a partir de main @ 92f8743)
+Data: 10/11/2026
+
+==========================================================================
+1. RESUMO
+==========================================================================
+
+O roteiro "O projeto é IHP que segue.txt" foi aplicado por inteiro. Cada
+etapa virou um commit:
+
+  1a8be96  refactor(view): centraliza o nome do sistema em nomeDoSistema
+  8e3e768  feat(security): exige letra maiúscula na senha e adiciona gerador de senha aleatória
+  36568d0  feat(db): cria tabela subjects e migra students para users com papel aluno
+  68bb288  refactor(domain): divide o domínio em módulos e adota User, Subject e MatriculaDetalhada
+  9097b43  feat(students): cadastra estudantes como users com papel aluno e senha gerada
+  746ce36  feat(subjects): adiciona CRUD de disciplinas e matrícula por disciplina
+  a767c20  test: cobre disciplinas, alunos como users, pipeline de matrícula e cadastro de aluno
+
+Principais mudanças:
+  - Estudantes deixaram de ter tabela própria: agora são usuários (users)
+    com papel "aluno". A tabela students foi removida.
+  - Nova tabela subjects (disciplinas). Cada disciplina pertence a um curso.
+    A matrícula passou a ser feita na disciplina, e o curso é obtido a partir dela.
+  - Quando o admin cadastra um aluno, o sistema gera uma senha aleatória e
+    a mostra uma única vez.
+  - A política de senha agora exige uma letra maiúscula.
+  - O domínio foi dividido em módulos. Foi criada a camada de casos de uso
+    (Application/UseCase), que recebe as dependências como portas.
+  - O nome "School Control" fica guardado num único lugar.
+
+
+==========================================================================
+2. O QUE MUDOU, ETAPA POR ETAPA
+==========================================================================
+
+2.1 Nome do projeto
+  - Application/Helper/View.hs exporta a constante nomeDoSistema = "School Control".
+  - Layout.hs (título, marca da navbar, og:title), Sessions/New.hs,
+    Registrations/New.hs e Static/Welcome.hs passaram a usar a constante.
+  - static/app.css (comentário) e static/app.js (prefixo do console) agora
+    usam "School Control".
+  - Ficaram sem mudança, como o roteiro pede: a chave AES em Security.hs, o domínio
+    schoolcontrol.dev em Fixtures.sql e o link do README.
+
+2.2 Política de senha e gerador
+  - Application/Security.hs: novo erro SenhaSemMaiuscula e a mensagem "A senha
+    precisa conter pelo menos uma letra maiúscula". O cadastro público, o
+    cadastro de usuários pelo admin e o gerador usam essa mesma regra.
+  - Novo Application/Security/GeradorSenha.hs:
+      * montarSenha :: Int -> [Word8] -> Maybe Text é o núcleo puro. Ele
+        consome bytes aleatórios num StateT [Word8] Maybe e sorteia uma maiúscula,
+        uma minúscula, um dígito e o restante do alfabeto. Depois embaralha
+        tudo com Fisher-Yates. A amostragem é por rejeição, então não há viés
+        de "mod". Se os bytes acabarem, devolve Nothing.
+      * O alfabeto não tem caracteres ambíguos (I, O, l, 0, 1).
+      * gerarSenhaAleatoria :: FonteAleatoria -> AuthConfig -> IO Text recebe
+        a fonte de aleatoriedade como porta. Em produção a fonte é getRandomBytes
+        (crypton, criptograficamente seguro). Se os bytes não bastarem, pede mais.
+      * O tamanho da senha gerada é max 12 (tamanho mínimo da config).
+  - Application/Helper/Controller.hs ganhou o adaptador viaSenha config, no
+    mesmo estilo de viaDominio.
+  - Web/Controller/Users.hs: hasMinLength 6 foi trocado por viaSenha, na
+    criação e na troca de senha.
+  - Os textos de ajuda de Users/New.hs e Registrations/New.hs foram atualizados.
+
+2.3 Banco de dados
+  - Application/Schema.sql:
+      * a tabela students foi removida, junto com students_email_key;
+      * nova tabela subjects (course_id, name, workload), com FK para courses
+        (ON DELETE CASCADE), CHECK workload > 0, UNIQUE (course_id, name) e índice
+        em course_id;
+      * em enrollments, course_id deu lugar a subject_id. student_id agora
+        referencia users. A restrição única passou a ser (student_id, subject_id).
+  - Nova migração Application/Migration/1794333120-disciplinas-e-alunos.sql:
+      0. Trava de segurança: se algum e-mail de students pertence a um
+         usuário que não é aluno, a migração é abortada com RAISE EXCEPTION.
+      1. Cria subjects e uma "<Curso> — Disciplina geral" para cada curso.
+      2. Copia os students para users com papel aluno e password_hash '!'.
+         Esse hash não funciona: o aluno só entra depois que o admin gerar
+         uma senha. Se o e-mail já existir em users (sem diferenciar
+         maiúsculas), o usuário existente é reaproveitado.
+      3. Remapeia enrollments.student_id para users e course_id para a
+         disciplina padrão do curso.
+      4. Recria as FKs, os índices e as restrições, e apaga a tabela students.
+    O arquivo foi criado à mão porque o "new-migration" precisa do banco
+    rodando. O nome segue o mesmo padrão de timestamp.
+
+2.4 Domínio (Application/Domain/*)
+  O Domain.hs, que tinha cerca de 640 linhas, foi dividido. Ele só reexporta
+  os módulos abaixo, então nenhum import precisou mudar:
+    - Notas.hs       pesos, AV1/AV2/AV3, NF, situação, conceito, mediaDaTurma
+    - Validacao.hs   ErroValidacao, validarNota/CargaHoraria/Course/Subject/Grade, emailValido
+    - Permissoes.hs  Recurso (com Disciplinas), Operacao, podeAcessar,
+                     recursosVisiveis, ehAluno, alunos, podeTrocarPapel
+    - Cadastro.hs    cadastro público (validação e pipeline CPS), sugestão de e-mail livre
+    - Matricula.hs   MatriculaDetalhada, detalharMatriculas, disciplinasComCurso,
+                     rotuloDaDisciplina, nomes, ErroMatricula e pipelineMatriculaCPS
+    - Relatorios.hs  boletim, médias por curso e por disciplina, ranking, filtros e KPIs
+  Mudanças de comportamento:
+    - Student foi trocado por User em todas as assinaturas. validarStudent foi
+      removido.
+    - Os relatórios trabalham sobre [MatriculaDetalhada], o read model que junta
+      matrícula, aluno, disciplina e curso.
+    - Novas funções: mediaPorDisciplina, nomeDaDisciplina, validarSubject,
+      filtrarPorDisciplina, filtrarDisciplinas, filtroAtivo.
+    - FiltroRelatorio ganhou o campo disciplinaId.
+    - alunosPorCurso e rankingDeAlunos não repetem o aluno que está matriculado
+      em mais de uma disciplina do mesmo curso.
+
+2.5 Caso de uso CadastrarAluno e tela de Estudantes
+  - Novo Application/UseCase/CadastrarAluno.hs. cadastrarAluno é polimórfico
+    em m e recebe PortasCadastroAluno m, um record com emailJaExiste,
+    gerarSenha, gerarHash e persistir. Ele valida o nome e o e-mail, recusa
+    e-mail duplicado, gera a senha, gera o hash, persiste e devolve
+    (usuário, senha em texto). Nos testes ele roda com State, sem banco.
+  - Web/Controller/Students.hs virou uma fachada sobre users com papel aluno:
+      * a listagem filtra userRole = Aluno;
+      * buscarAluno dá 404 se o id não for de um aluno. Assim não dá para ver,
+        editar ou excluir um admin, professor ou coordenador pela página de
+        Estudantes;
+      * no cadastro, as portas são montadas com o IHP. Cada erro do caso de uso
+        vira attachFailure #name ou #email;
+      * quando dá certo, a senha aparece na nova view Students/Credenciais.hs com
+        o aviso "Anote agora; ela não será exibida novamente". A senha não passa
+        por setSuccessMessage, que a gravaria no cookie de sessão, e não vai
+        para o log;
+      * a edição altera só nome e e-mail. O papel continua Aluno e o e-mail é
+        validado como único em users;
+      * nova action RegenerarSenhaAction (POST /RegenerarSenha?studentId), com um
+        botão "Gerar nova senha" na página do estudante. Ela gera outra senha,
+        zera as tentativas de login e desbloqueia a conta. É a forma de dar
+        acesso aos alunos migrados com hash '!'.
+  - Os formulários de Estudantes usam formFor' com a rota explícita, porque o
+    registro agora é um User e o formFor apontaria para /CreateUser.
+
+2.6 Disciplinas e ajustes em Matrículas, Notas, Relatórios e Usuários
+  - CRUD completo de disciplinas: SubjectsController (Types, Routes e
+    FrontController), Web/Controller/Subjects.hs e as views
+    Subjects/{Index,New,Edit,Show,Form}.hs. O formulário tem um select de curso,
+    e a listagem mostra a coluna Curso. Existe uma validação de nome único dentro
+    do curso, espelhando a constraint do banco.
+  - A página de detalhes do curso lista as disciplinas dele.
+  - Matrículas: o formulário escolhe Aluno (só users com papel aluno) e
+    Disciplina, com o rótulo "Disciplina (Curso)". As telas mostram aluno,
+    disciplina e curso.
+  - Notas: o select de matrícula mostra "Aluno — Disciplina / Curso (status)".
+    A listagem e o boletim mostram a disciplina.
+  - Relatórios: o controller carrega users, subjects, courses, enrollments e
+    grades uma vez e monta detalharMatriculas uma única vez. Há um novo filtro
+    por disciplina e um novo card "Média final por disciplina". O KPI "Total de
+    alunos" conta os usuários com papel aluno.
+  - Usuários: no Update, um aluno que tem matrículas não pode mudar para outro
+    papel. A regra fica no domínio, em podeTrocarPapel.
+  - Layout e Welcome ganharam o item de menu e o atalho "Disciplinas".
+  - Registrations não mudou. Quem cria a conta sozinho vira aluno e pode ser
+    matriculado.
+
+2.7 Testes (Test/Main.hs)
+  - Os fixtures ana e bruno agora são User com papel Aluno. Foram criados
+    uma professora e os fixtures de Subject.
+  - Os testes de relatórios e filtros foram reescritos para usar
+    MatriculaDetalhada.
+  - O pipelineMatriculaCPS é testado nos casos AlunoNaoEncontrado,
+    UsuarioNaoEhAluno, DisciplinaNaoEncontrada, MatriculaDuplicada, sucesso e
+    matrícula em outra disciplina do mesmo curso.
+  - Novos testes cobrem permissões de Disciplinas, ehAluno/alunos,
+    podeTrocarPapel, validarSubject, validarForcaSenha (SenhaSemMaiuscula) e
+    montarSenha: várias listas de bytes geram senhas válidas, e bytes
+    insuficientes ou só rejeitáveis devolvem Nothing.
+  - cadastrarAluno é testado com State e portas falsas: no caso de sucesso,
+    persistir recebe o hash e não a senha; e-mail duplicado não persiste nada;
+    nome vazio e e-mail inválido são recusados.
+  Resultado: 83 exemplos, 0 falhas. Antes eram 60.
+
+
+==========================================================================
+3. ARQUITETURA ATUAL
+==========================================================================
+
+  Camada          Onde fica                                   Regra
+  --------------  ------------------------------------------  ----------------------------------------
+  Domínio (puro)  Application/Domain/*.hs,                    Sem IO e sem IHP: só ADTs e funções puras
+                  montarSenha, validarForcaSenha
+  Casos de uso    Application/UseCase/*.hs                    Polimórficos em m; dependem de portas
+                                                              (records de funções) -> DIP/ISP
+  Adaptadores     Web/Controller/*, Web/View/*,               Ligam o IHP às portas e traduzem os erros
+                  Application/Helper/*                        do domínio para attachFailure/mensagens
+  Infraestrutura  Application/Security.hs (bcrypt, AES-GCM),  Única parte que faz efeitos
+                  gerarSenhaAleatoria, banco via IHP
+
+Modelo de dados atual:
+  users(id, name, email UNIQUE, password_hash, user_role, document cifrado,
+        locked_at, failed_login_attempts, created_at)
+  courses(id, name, workload > 0, created_at)
+  subjects(id, course_id -> courses, name, workload > 0, created_at,
+           UNIQUE(course_id, name))
+  enrollments(id, student_id -> users, subject_id -> subjects, status,
+              UNIQUE(student_id, subject_id))
+  grades(id, enrollment_id -> enrollments, pe1, avf1, pe2, avf2, pe3?, avf3?,
+         notas entre 0 e 10)
+  Todas as FKs usam ON DELETE CASCADE. Excluir um curso apaga as disciplinas,
+  que apagam as matrículas, que apagam as notas. Excluir um aluno apaga as
+  matrículas e as notas dele.
+
+
+==========================================================================
+4. COMO O SISTEMA FUNCIONA HOJE
+==========================================================================
+
+  - Acesso: o visitante vê a página inicial. Ele pode entrar (/NewSession) ou
+    criar uma conta de aluno (/Register). O menu mostra só as áreas que o papel
+    do usuário logado pode visualizar.
+  - Login: bcrypt. Depois de 10 tentativas erradas, a conta fica bloqueada por
+    1 hora. Os eventos vão para o log com [auth]. Se o banco falhar, o usuário
+    vê uma mensagem amigável.
+  - Estudantes (admin e coordenador gerenciam; professor só vê): o cadastro
+    pede nome e e-mail. A senha é gerada e mostrada uma única vez. Também é
+    possível editar nome e e-mail, gerar nova senha e excluir.
+  - Cursos e Disciplinas: CRUD. Um curso tem várias disciplinas, cada uma com
+    sua carga horária.
+  - Matrículas: liga um aluno a uma disciplina e tem status ativa, trancada ou
+    concluída. Na edição só o status muda.
+  - Notas: uma linha de notas por matrícula. O sistema calcula AV1, AV2, AV3,
+    a NF, a situação e o conceito.
+  - Relatórios (dashboard): KPIs, médias por curso e por disciplina, matrículas
+    ativas por curso, situação dos alunos, ranking e alunos por curso. Há filtros
+    por curso, disciplina e status. A página atualiza em tempo real com
+    autoRefresh. O ranking e os nomes de alunos só aparecem para quem pode ver
+    Estudantes.
+  - Usuários (só admin): CRUD de contas com papel e CPF opcional, guardado
+    cifrado com AES-256-GCM.
+
+
+==========================================================================
+5. REGRAS DE NEGÓCIO
+==========================================================================
+
+5.1 Notas e aprovação
+  - AVn = 70% PEn + 30% AVfn, arredondada para 2 casas.
+  - Média parcial = (AV1 + AV2) / 2.
+  - A AV3 só existe se PE3 e AVf3 forem lançadas juntas. Não é possível lançar
+    só uma delas.
+  - NF = (média parcial + AV3) / 2. Sem AV3, a NF é a média parcial.
+  - Situação:
+      matrícula trancada              -> Trancado (as notas são ignoradas)
+      média parcial < 4,0             -> Reprovado
+      AV3 não lançada                 -> Aguardando AV3
+      AV3 < 4,0                       -> Reprovado
+      NF >= 5,0                       -> Aprovado
+      NF < 5,0                        -> Reprovado
+  - Conceito pela NF: < 4 Insuficiente; < 6 Regular; < 7,5 Bom; < 9 Ótimo;
+    a partir de 9, Excelente.
+  - Toda nota fica entre 0 e 10 (validação no domínio e CHECK no banco).
+  - Só pode haver um lançamento de notas por matrícula.
+
+5.2 Cursos e disciplinas
+  - O nome é obrigatório e a carga horária precisa ser maior que zero.
+  - O nome da disciplina é único dentro do curso (sem diferenciar maiúsculas
+    no formulário).
+
+5.3 Alunos
+  - Aluno é um usuário com papel "aluno" (predicado ehAluno).
+  - Para cadastrar, nome e e-mail válido são obrigatórios, e o e-mail não pode
+    estar em uso por nenhum usuário (sem diferenciar maiúsculas).
+  - A senha é gerada automaticamente, com 12 caracteres e ao menos uma
+    maiúscula, uma minúscula e um dígito. É mostrada uma única vez, e só o hash
+    bcrypt é gravado.
+  - A página de Estudantes nunca mostra nem altera usuários com outro papel
+    (responde 404).
+  - Um aluno com matrículas não pode ter o papel trocado (podeTrocarPapel).
+  - Excluir um aluno apaga as matrículas e as notas dele.
+
+5.4 Matrícula (pipeline CPS, nesta ordem)
+  1. O aluno selecionado existe           -> senão "Selecione um aluno válido"
+  2. O usuário tem papel aluno            -> senão "O usuário selecionado não é um aluno"
+  3. A disciplina existe                  -> senão "Selecione uma disciplina válida"
+  4. Não há matrícula do aluno na mesma
+     disciplina                           -> senão "Este aluno já está matriculado nesta disciplina"
+  - O aluno pode se matricular em várias disciplinas do mesmo curso.
+  - O curso da matrícula é sempre o curso da disciplina, então não existe
+    combinação incoerente.
+
+5.5 Senhas
+  - Mínimo de 8 caracteres (configurável), com pelo menos um número, uma letra
+    e uma letra maiúscula.
+  - Vale para o cadastro público, para o cadastro e a troca de senha feitos
+    pelo admin e para as senhas geradas.
+  - O custo do bcrypt e a chave AES podem ser trocados pelas variáveis
+    AUTH_BCRYPT_COST e AUTH_ENCRYPTION_KEY.
+
+5.6 Cadastro público (/Register)
+  - Nome e e-mail válido são obrigatórios, e a senha e a confirmação precisam
+    ser iguais. Em seguida vêm a força da senha e o e-mail livre. Se o e-mail
+    estiver em uso, o sistema sugere o próximo livre (ex.: ana1@...).
+  - A conta é criada sempre com papel Aluno, e o usuário já entra logado.
+
+5.7 Permissões (G = gerenciar, V = só visualizar, - = sem acesso)
+  Recurso      | Admin | Coordenador | Professor | Aluno
+  -------------+-------+-------------+-----------+------
+  Estudantes   |   G   |      G      |     V     |   -
+  Cursos       |   G   |      G      |     V     |   V
+  Disciplinas  |   G   |      G      |     V     |   V
+  Matrículas   |   G   |      G      |     V     |   -
+  Notas        |   G   |      V      |     G     |   -
+  Relatórios   |   V   |      V      |     V     |   V
+  Usuários     |   G   |      -      |     -     |   -
+  - Sem login, o usuário vai para a tela de login e volta para a página que
+    tentou abrir. Sem permissão, volta para "/" com uma mensagem.
+  - O admin não pode excluir a própria conta.
+
+5.8 Relatórios
+  - Os filtros por curso, disciplina e status são opcionais e se combinam.
+  - "Total de alunos" mostra todos os alunos quando não há filtro, e os alunos
+    distintos do recorte quando há.
+  - "% Aprovados" = aprovados / linhas do boletim. Se não houver nota lançada,
+    mostra "—".
+  - "Alunos por curso" ignora matrículas trancadas e não repete nomes.
+  - O ranking usa a média das NFs de cada aluno, deixa de fora quem não tem
+    nota e desempata pelo nome.
+
+
+==========================================================================
+6. COMO APLICAR NO AMBIENTE
+==========================================================================
+
+  1. Antes de migrar um banco que já tem dados, a própria migração confere se
+     algum e-mail de students pertence a professor, coordenador ou admin. Se
+     pertencer, ela aborta. Corrija esses casos antes.
+  2. Com o "devenv up" rodando, aplique a migração: "migrate" (ou deixe o IHP
+     aplicar). Num banco novo, o Schema.sql já está no formato final.
+  3. Os alunos migrados ficam com o hash '!'. Abra cada um em Estudantes ->
+     Ver -> "Gerar nova senha" e entregue a senha ao aluno.
+
+
+==========================================================================
+7. VERIFICAÇÃO REALIZADA
+==========================================================================
+
+  - Compilação completa da aplicação (Main.hs) com as flags do IHP: sem erros.
+  - Testes unitários: 83 exemplos, 0 falhas.
+  - Migração testada num PostgreSQL 17 temporário. Partindo do schema antigo,
+    com dados de exemplo (aluno com e-mail em maiúsculas que já existia em users,
+    3 matrículas e 1 nota), a migração preservou todas as matrículas e a nota.
+    O schema resultante ficou igual ao do Schema.sql novo; só muda a ordem das
+    colunas. A trava contra e-mail de não-aluno também foi testada.
+  - A aplicação rodou contra esse banco. Pelo HTTP foram testados: login de
+    admin; todas as listagens; cadastro de aluno com senha gerada e login com
+    ela; erros de e-mail duplicado, nome vazio e e-mail inválido; 404 ao abrir
+    um admin pela página de Estudantes; disciplina duplicada e carga horária 0;
+    matrícula duplicada e matrícula de não-aluno; bloqueio da troca de papel;
+    senha sem maiúscula em Usuários; filtro por disciplina no relatório;
+    regenerar a senha de um aluno migrado e entrar com ela; editar e excluir
+    estudante (as matrículas foram apagadas em cascata); lançar nota. A senha
+    gerada não apareceu no log do servidor.
+  - Como o roteiro pede ("siga os erros do compilador"), os commits da etapa 3
+    à 6 dependem uns dos outros. O projeto volta a compilar no commit 746ce36,
+    e os testes voltam a compilar no a767c20.
+
+
+==========================================================================
+8. DESVIOS DO ROTEIRO E PONTOS DE ATENÇÃO
+==========================================================================
+
+  - flake.nix (appName): não foi alterado. A mudança era opcional e muda o nome
+    do pacote e do serviço no deploy.
+  - "CanSelect Subject" com o rótulo "Disciplina (Curso)": o Subject sozinho
+    não traz o nome do curso, porque relationSupport = false no flake e não há
+    fetchRelated. Por isso foi criada a instância CanSelect (Subject, Course),
+    alimentada por disciplinasComCurso, que gera o mesmo rótulo.
+  - A seção 4.2 do roteiro estava cortada no meio do código do gerador. A
+    implementação foi feita a partir do que estava escrito: núcleo puro, porta
+    FonteAleatoria e amostragem por rejeição (a melhoria opcional do roteiro
+    já está aplicada).
+  - Na migração, foram acrescentados a trava de segurança (item 0) e o
+    "DROP INDEX IF EXISTS enrollments_course_id_index".
+  - O README.md ainda cita a tabela Student e o fluxo antigo de matrícula por
+    curso. Ele não fazia parte do roteiro e não foi alterado.
+  - Os usuários de teste do Fixtures.sql usam a senha "senha123", que não
+    atende à nova política. O login continua funcionando, porque a política só
+    é verificada quando a senha é definida.
+  - A tela de credenciais é a resposta do próprio POST. Se a página for
+    recarregada, o navegador oferece reenviar o formulário. Num cadastro, o
+    reenvio esbarra em "e-mail já cadastrado". Em "Gerar nova senha", o reenvio
+    gera outra senha.
