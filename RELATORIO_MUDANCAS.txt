@@ -221,7 +221,7 @@ Modelo de dados atual:
     sua carga horária.
   - Matrículas: liga um aluno a uma disciplina e tem status ativa, trancada ou
     concluída. Na edição só o status muda.
-  - Lançar notas (professor e admin), em etapas: 1) escolher a disciplina
+  - Lançar notas (só o professor), em etapas: 1) escolher a disciplina
     (o professor vê só as que ministra); 2) escolher o aluno matriculado nela
     que ainda não tem notas; 3) preencher PE/AVf.
   - Notas: uma linha de notas por matrícula. O sistema calcula AV1, AV2, AV3,
@@ -290,7 +290,8 @@ Modelo de dados atual:
     tela de Matrículas.
   - "Meus alunos" mostra as disciplinas de cada aluno e pode ser filtrado por
     disciplina (só as que o professor ministra).
-  - O professor só lança, edita e exclui notas das suas disciplinas.
+  - Só o professor lança, edita e exclui notas, e apenas nas suas disciplinas.
+    Admin e coordenador só visualizam as notas.
   - Um professor que ministra disciplinas não pode trocar de papel. A regra
     vale também para o aluno com matrículas (podeTrocarPapel).
 
@@ -334,7 +335,7 @@ Modelo de dados atual:
   Cursos       |   G   |      G      |     V     |   V
   Disciplinas  |   G   |      G      |     V     |   V
   Matrículas   |   G   |      G      |     -     |   -
-  Notas        |   G   |      V      |    G*     |   -
+  Notas        |   V   |      V      |    G*     |   -
   Relatórios   |   V   |      V      |     V     |   -
   Meu boletim  |   -   |      -      |     -     |   V
   (*) só das disciplinas que o professor ministra
@@ -505,3 +506,14 @@ Modelo de dados atual:
     lançamento de notas continua listando os alunos matriculados nas suas
     disciplinas.
   - Testes: 99 exemplos, 0 falhas.
+
+
+==========================================================================
+12. LANÇAMENTO DE NOTAS EXCLUSIVO DO PROFESSOR (quinta rodada)
+==========================================================================
+
+  - O administrador perdeu o "Gerenciar" de Notas. Ele vê a listagem e o
+    boletim de cada nota, mas não tem o botão "+ Lançar notas" nem os links
+    Editar/Excluir. O acesso direto a /NewGrade, /EditGrade etc. volta para a
+    página inicial com "Você não tem permissão".
+  - Testes: 100 exemplos, 0 falhas.
