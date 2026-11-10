@@ -60,12 +60,12 @@ painel usuario = [hsx|
         <p>Você entrou como <span class="badge bg-secondary">{nomeDoPapel usuario.userRole}</span></p>
     </div>
     <div class="row g-3">
-        {forEach (recursosVisiveis usuario.userRole) atalho}
+        {forEach (recursosVisiveis usuario.userRole) (atalho usuario.userRole)}
     </div>
 |]
 
-atalho :: Recurso -> Html
-atalho recurso = [hsx|
+atalho :: UserRole -> Recurso -> Html
+atalho papel recurso = [hsx|
     <div class="col-sm-6 col-lg-4">
         <a href={destino} class="card text-decoration-none h-100">
             <div class="card-body">
@@ -80,7 +80,9 @@ atalho recurso = [hsx|
         icone, titulo, descricao :: Text
         destino :: Text
         (icone, titulo, descricao, destino) = case recurso of
-            Estudantes -> ("🎓", "Estudantes", "Cadastro de alunos", pathTo StudentsAction)
+            Estudantes
+                | papel == Professor -> ("🎓", "Meus alunos", "Alunos matriculados nas suas disciplinas", pathTo StudentsAction)
+                | otherwise          -> ("🎓", "Estudantes", "Cadastro de alunos", pathTo StudentsAction)
             Cursos     -> ("📚", "Cursos", "Cursos e carga horária", pathTo CoursesAction)
             Disciplinas -> ("📖", "Disciplinas", "Disciplinas de cada curso", pathTo SubjectsAction)
             Matriculas -> ("🧾", "Matrículas", "Alunos matriculados em cada disciplina", pathTo EnrollmentsAction)

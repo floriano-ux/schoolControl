@@ -11,7 +11,7 @@ instance Controller ReportsController where
     action ReportsAction = autoRefresh do
         users       <- query @User |> fetch
         subjects    <- query @Subject |> orderBy #name |> fetch
-        courses     <- query @Course |> orderBy #name |> fetch
+        todosCursos <- query @Course |> orderBy #name |> fetch
         enrollments <- query @Enrollment |> fetch
         grades      <- query @Grade |> fetch
 
@@ -22,8 +22,10 @@ instance Controller ReportsController where
                                  <|> (paramOrNothing @Text "status" >>= parseStatus)
                 }
 
-            matriculas           = detalharMatriculas users subjects courses enrollments
-            disciplinas          = sortOn rotuloDaDisciplina (disciplinasComCurso courses subjects)
+            usuario              = currentUser
+            matriculas           = matriculasVisiveis usuario (detalharMatriculas users subjects todosCursos enrollments)
+            disciplinas          = sortOn rotuloDaDisciplina (disciplinasComCurso todosCursos (disciplinasVisiveis usuario subjects))
+            courses              = cursosVisiveis usuario subjects todosCursos
             matriculasFiltradas  = aplicarFiltro filtro matriculas
             cursosFiltrados      = filtrarCursos filtro.cursoId courses
             disciplinasFiltradas = filtrarDisciplinas filtro disciplinas
@@ -37,7 +39,7 @@ instance Controller ReportsController where
             situacoes        = contarPorSituacao linhasBoletim
             cargaTotal       = cargaHorariaTotal cursosFiltrados
 
-            totalAlunos      = totalAlunosFiltrados filtro (alunos users) matriculasFiltradas
+            totalAlunos      = totalAlunosFiltrados filtro (alunosVisiveis usuario matriculas (alunos users)) matriculasFiltradas
             matriculasAtivas = totalMatriculasAtivas matriculasFiltradas
             taxaAprov        = taxaAprovacao linhasBoletim
 

@@ -40,13 +40,14 @@ navbar = [hsx|
                 <span>{nomeDoSistema}</span>
             </a>
             <div class="navbar-nav me-auto">
-                {forEach recursos linkDoMenu}
+                {forEach recursos (linkDoMenu papel)}
             </div>
             {usuarioLogado}
         </div>
     </nav>
 |]
     where
+        papel = maybe Aluno (.userRole) (currentUserOrNothing @User)
         recursos = maybe [] (\usuario -> recursosVisiveis usuario.userRole) (currentUserOrNothing @User)
 
         usuarioLogado = case currentUserOrNothing @User of
@@ -64,16 +65,19 @@ navbar = [hsx|
                 </div>
             |]
 
-linkDoMenu :: Recurso -> Html
-linkDoMenu recurso = case recurso of
-    Estudantes -> [hsx|<a class="nav-link" href={StudentsAction}>Estudantes</a>|]
-    Cursos     -> [hsx|<a class="nav-link" href={CoursesAction}>Cursos</a>|]
-    Disciplinas -> [hsx|<a class="nav-link" href={SubjectsAction}>Disciplinas</a>|]
-    Matriculas -> [hsx|<a class="nav-link" href={EnrollmentsAction}>Matrículas</a>|]
-    Notas      -> [hsx|<a class="nav-link" href={GradesAction}>Notas</a>|]
-    Relatorios -> [hsx|<a class="nav-link" href={ReportsAction}>Relatórios</a>|]
-    Boletim    -> [hsx|<a class="nav-link" href={MeuBoletimAction}>Meu boletim</a>|]
-    Usuarios   -> [hsx|<a class="nav-link" href={UsersAction}>Usuários</a>|]
+linkDoMenu :: UserRole -> Recurso -> Html
+linkDoMenu papel recurso = [hsx|<a class="nav-link" href={destino}>{nomeDoRecurso papel recurso}</a>|]
+    where
+        destino :: Text
+        destino = case recurso of
+            Estudantes  -> pathTo StudentsAction
+            Cursos      -> pathTo CoursesAction
+            Disciplinas -> pathTo SubjectsAction
+            Matriculas  -> pathTo EnrollmentsAction
+            Notas       -> pathTo GradesAction
+            Relatorios  -> pathTo ReportsAction
+            Boletim     -> pathTo MeuBoletimAction
+            Usuarios    -> pathTo UsersAction
 
 -- The 'assetPath' function used below appends a `?v=SOME_VERSION` to the static assets in production
 -- This is useful to avoid users having old CSS and JS files in their browser cache once a new version is deployed

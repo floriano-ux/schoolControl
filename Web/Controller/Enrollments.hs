@@ -10,11 +10,12 @@ instance Controller EnrollmentsController where
     beforeAction = exigirPermissao Visualizar Matriculas
 
     action EnrollmentsAction = do
-        matriculas <- carregarMatriculasDetalhadas
+        matriculas <- matriculasVisiveisPara currentUser
         render IndexView { .. }
 
     action ShowEnrollmentAction { enrollmentId } = do
         detalhe <- buscarMatriculaDetalhada enrollmentId
+        exigirMatriculaVisivel currentUser detalhe
         render ShowView { .. }
 
     action NewEnrollmentAction = do

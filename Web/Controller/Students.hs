@@ -15,7 +15,9 @@ instance Controller StudentsController where
     beforeAction = exigirPermissao Visualizar Estudantes
 
     action StudentsAction = do
-        students <- query @User |> filterWhere (#userRole, Aluno) |> orderBy #name |> fetch
+        todos      <- query @User |> filterWhere (#userRole, Aluno) |> orderBy #name |> fetch
+        matriculas <- matriculasVisiveisPara currentUser
+        let students = alunosVisiveis currentUser matriculas todos
         render IndexView { .. }
 
     action NewStudentAction = do
@@ -96,11 +98,13 @@ instance Controller StudentsController where
         setSuccessMessage "Estudante excluído"
         redirectTo StudentsAction
 
--- Impede que um admin, coordenador ou professor seja visto ou alterado pela página de Estudantes.
-buscarAluno :: (?modelContext :: ModelContext, ?request :: Request, ?respond :: Respond) => Id User -> IO User
+-- Só alunos aparecem aqui; o professor só acessa alunos matriculados nas suas disciplinas.
+buscarAluno :: (?modelContext :: ModelContext, ?context :: ControllerContext, ?request :: Request, ?respond :: Respond) => Id User -> IO User
 buscarAluno userId = do
     user <- fetch userId
     notFoundWhen (not (ehAluno user))
+    matriculas <- matriculasVisiveisPara currentUser
+    notFoundWhen (null (alunosVisiveis currentUser matriculas [user]))
     pure user
 
 anexarErro :: ErroCadastroAluno -> User -> User

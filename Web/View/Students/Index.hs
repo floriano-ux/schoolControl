@@ -7,7 +7,7 @@ instance View IndexView where
     html IndexView { .. } = [hsx|
         {breadcrumb}
 
-        {cabecalhoPagina "Estudantes" (when (pode Gerenciar Estudantes) novoEstudante)}
+        {cabecalhoPagina titulo (when (pode Gerenciar Estudantes) novoEstudante)}
         <div class="card">
             <div class="table-responsive">
                 <table class="table table-hover">
@@ -28,6 +28,7 @@ instance View IndexView where
             breadcrumb = renderBreadcrumb
                 [ breadcrumbLink "Estudantes" StudentsAction
                 ]
+            titulo = maybe "Estudantes" (\u -> nomeDoRecurso u.userRole Estudantes) (currentUserOrNothing @User)
             novoEstudante = [hsx|<a href={pathTo NewStudentAction} class="btn btn-primary">+ Novo estudante</a>|]
 
 renderStudent :: User -> Html
