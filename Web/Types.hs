@@ -77,6 +77,7 @@ data UsersController
     | EditUserAction { userId :: !(Id User) }
     | UpdateUserAction { userId :: !(Id User) }
     | DeleteUserAction { userId :: !(Id User) }
+    | AtribuirDisciplinasAction { userId :: !(Id User) }
     deriving (Eq, Show, Data)
 
 data SessionsController

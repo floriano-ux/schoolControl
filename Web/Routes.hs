@@ -77,6 +77,7 @@ GET /ShowUser?userId ShowUserAction
 GET /EditUser?userId EditUserAction
 POST /UpdateUser?userId UpdateUserAction
 DELETE /DeleteUser?userId DeleteUserAction
+POST /AtribuirDisciplinas?userId AtribuirDisciplinasAction
 |]
 
 [routes|SessionsController

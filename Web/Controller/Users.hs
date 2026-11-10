@@ -19,8 +19,21 @@ instance Controller UsersController where
         user <- fetch userId
         config <- carregarAuthConfig
         let documento = decifrarOpcional config user.document
-        disciplinas <- query @Subject |> filterWhere (#professorId, Just userId) |> orderBy #name |> fetch
-        render ShowView { user, documento, disciplinas }
+        subjects    <- query @Subject |> orderBy #name |> fetch
+        courses     <- query @Course |> fetch
+        professores <- query @User |> filterWhere (#userRole, Professor) |> fetch
+        let disciplinas = sortOn rotuloDaDisciplina (disciplinasComCurso courses subjects)
+        render ShowView { user, documento, disciplinas, professores }
+
+    action AtribuirDisciplinasAction { userId } = do
+        professor <- fetch userId
+        notFoundWhen (professor.userRole /= Professor)
+        subjects <- query @Subject |> fetch
+        let alteradas = redistribuirDisciplinas professor.id (paramList @(Id Subject) "subjectIds") subjects
+        mapM_ updateRecord alteradas
+        logAuthInfo ("disciplinas do professor " <> professor.email <> " atualizadas pelo admin")
+        setSuccessMessage "Disciplinas do professor atualizadas"
+        redirectTo ShowUserAction { userId }
 
     action NewUserAction = do
         let user = newRecord @User

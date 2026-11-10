@@ -11,6 +11,8 @@ module Application.Domain.Escopo
     , semNotaLancada
     , professorValido
     , nomeDoProfessor
+    , alunosComDisciplinas
+    , redistribuirDisciplinas
     ) where
 
 import IHP.Prelude
@@ -67,3 +69,26 @@ nomeDoProfessor :: [User] -> Subject -> Text
 nomeDoProfessor users subject = case subject.professorId of
     Nothing          -> "Sem professor"
     Just professorId -> maybe "(professor removido)" (.name) (find (\u -> u.id == professorId) users)
+
+-- Linhas de "Meus alunos": cada aluno com as disciplinas (visíveis) em que está matriculado.
+-- Com uma disciplina escolhida, ficam só os alunos matriculados nela.
+alunosComDisciplinas :: Maybe (Id Subject) -> [MatriculaDetalhada] -> [User] -> [(User, [Text])]
+alunosComDisciplinas disciplinaId matriculas users =
+    [ (u, sort (map (\m -> m.disciplina.name) doAluno))
+    | u <- users
+    , let doAluno = filter (\m -> m.aluno.id == u.id) matriculas
+    , maybe True (\sid -> any (\m -> m.disciplina.id == sid) doAluno) disciplinaId
+    ]
+
+-- Atribui ao professor exatamente as disciplinas escolhidas: as marcadas passam a ser dele
+-- e as que eram dele e foram desmarcadas ficam sem professor. Devolve só as que mudaram.
+redistribuirDisciplinas :: Id User -> [Id Subject] -> [Subject] -> [Subject]
+redistribuirDisciplinas professorId escolhidas subjects =
+    [ s |> set #professorId novo
+    | s <- subjects
+    , let novo
+            | s.id `elem` escolhidas            = Just professorId
+            | s.professorId == Just professorId = Nothing
+            | otherwise                         = s.professorId
+    , novo /= s.professorId
+    ]
