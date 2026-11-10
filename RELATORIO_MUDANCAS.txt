@@ -117,7 +117,7 @@ Principais mudanças:
   - Web/Controller/Students.hs virou uma fachada sobre users com papel aluno:
       * a listagem filtra userRole = Aluno;
       * buscarAluno dá 404 se o id não for de um aluno. Assim não dá para ver,
-        editar ou excluir um admin, professor ou coordenador pela página de
+        editar ou excluir um admin ou professor pela página de
         Estudantes;
       * no cadastro, as portas são montadas com o IHP. Cada erro do caso de uso
         vira attachFailure #name ou #email;
@@ -214,7 +214,7 @@ Modelo de dados atual:
   - Login: bcrypt. Depois de 10 tentativas erradas, a conta fica bloqueada por
     1 hora. Os eventos vão para o log com [auth]. Se o banco falhar, o usuário
     vê uma mensagem amigável.
-  - Estudantes (admin e coordenador gerenciam; professor só vê): o cadastro
+  - Estudantes (o admin gerencia; o professor só vê os seus alunos): o cadastro
     pede nome e e-mail. A senha é gerada e mostrada uma única vez. Também é
     possível editar nome e e-mail, gerar nova senha e excluir.
   - Cursos e Disciplinas: CRUD. Um curso tem várias disciplinas, cada uma com
@@ -262,8 +262,8 @@ Modelo de dados atual:
   - Só pode haver um lançamento de notas por matrícula.
 
 5.2 Cursos e disciplinas
-  - Cada disciplina pode ter um professor responsável, atribuído por admin ou
-    coordenador no cadastro da disciplina. O professor é opcional, mas, se
+  - Cada disciplina pode ter um professor responsável, atribuído
+    pelo admin no cadastro da disciplina. O professor é opcional, mas, se
     informado, precisa ter papel de professor. Se o usuário for excluído, a
     disciplina fica sem professor.
   - O nome é obrigatório e a carga horária precisa ser maior que zero.
@@ -291,7 +291,7 @@ Modelo de dados atual:
   - "Meus alunos" mostra as disciplinas de cada aluno e pode ser filtrado por
     disciplina (só as que o professor ministra).
   - Só o professor lança, edita e exclui notas, e apenas nas suas disciplinas.
-    Admin e coordenador só visualizam as notas.
+    O admin só visualiza as notas.
   - Um professor que ministra disciplinas não pode trocar de papel. A regra
     vale também para o aluno com matrículas (podeTrocarPapel).
 
@@ -329,23 +329,22 @@ Modelo de dados atual:
   - A conta é criada sempre com papel Aluno, e o usuário já entra logado.
 
 5.7 Permissões (G = gerenciar, V = só visualizar, - = sem acesso)
-  Recurso      | Admin | Coordenador | Professor | Aluno
-  -------------+-------+-------------+-----------+------
-  Estudantes   |   G   |      G      |    V*     |   -
-  Cursos       |   G   |      G      |     V     |   V
-  Disciplinas  |   G   |      G      |     V     |   V
-  Matrículas   |   G   |      G      |     -     |   -
-  Notas        |   V   |      V      |    G*     |   -
-  Relatórios   |   V   |      V      |     V     |   -
-  Meu boletim  |   -   |      -      |     -     |   V
+  Recurso      | Admin | Professor | Aluno
+  -------------+-------+-----------+------
+  Estudantes   |   G   |    V*     |   -
+  Cursos       |   G   |     V     |   V
+  Disciplinas  |   G   |     V     |   V
+  Matrículas   |   G   |     -     |   -
+  Notas        |   V   |    G*     |   -
+  Relatórios   |   V   |     V     |   -
+  Meu boletim  |   -   |     -     |   V
+  Usuários     |   G   |     -     |   -
   (*) só das disciplinas que o professor ministra
-  Usuários     |   G   |      -      |     -     |   -
   - O menu superior e os atalhos da página inicial mostram só as áreas que o
     papel pode ver:
       Aluno:        Cursos, Disciplinas, Meu boletim
       Professor:    Meus alunos, Cursos, Disciplinas, Notas, Relatórios
-      Coordenador:  Estudantes, Cursos, Disciplinas, Matrículas, Notas, Relatórios
-      Admin:        tudo acima (menos Meu boletim) e Usuários
+      Admin:        Estudantes, Cursos, Disciplinas, Matrículas, Notas, Relatórios, Usuários
   - O aluno não vê o dashboard de Relatórios, porque ele traz dados de toda a
     instituição (total de alunos, aprovação e médias de todos).
   - Nas listagens, as colunas e os links de Editar/Excluir e o botão "+ Novo"
@@ -370,7 +369,7 @@ Modelo de dados atual:
 ==========================================================================
 
   1. Antes de migrar um banco que já tem dados, a própria migração confere se
-     algum e-mail de students pertence a professor, coordenador ou admin. Se
+     algum e-mail de students pertence a um usuário que não é aluno. Se
      pertencer, ela aborta. Corrija esses casos antes.
   2. Com o "devenv up" rodando, aplique a migração: "migrate" (ou deixe o IHP
      aplicar). Num banco novo, o Schema.sql já está no formato final.
@@ -464,7 +463,7 @@ Modelo de dados atual:
   - Banco: nova coluna subjects.professor_id (opcional, FK para users com
     ON DELETE SET NULL, com índice). Migração:
     Application/Migration/1794336897-professor-da-disciplina.sql.
-  - Admin e coordenador: o formulário de disciplina tem o campo "Professor
+  - Admin: o formulário de disciplina tem o campo "Professor
     responsável" (só usuários com papel professor). A listagem e o detalhe da
     disciplina mostram o professor, e a página do usuário professor lista as
     disciplinas que ele ministra.
@@ -516,4 +515,23 @@ Modelo de dados atual:
     boletim de cada nota, mas não tem o botão "+ Lançar notas" nem os links
     Editar/Excluir. O acesso direto a /NewGrade, /EditGrade etc. volta para a
     página inicial com "Você não tem permissão".
+  - Testes: 100 exemplos, 0 falhas.
+
+
+==========================================================================
+13. REMOÇÃO DO PAPEL COORDENADOR (sexta rodada)
+==========================================================================
+
+  - Agora só existem os papéis Admin, Professor e Aluno.
+  - Banco: o ENUM user_role passou a ser ('admin', 'professor', 'aluno').
+    Migração: Application/Migration/1794339151-remove-papel-coordenador.sql.
+    O Postgres não remove valores de um ENUM, então o tipo é recriado e a
+    coluna users.user_role é convertida, mantendo o padrão 'aluno'.
+  - As contas com papel coordenador são EXCLUÍDAS pela migração. Elas não têm
+    vínculos, porque matrículas são de alunos e disciplinas são de
+    professores. A conta de teste "Carla Coordenadora" saiu do Fixtures.sql.
+  - Domínio: o construtor Coordenador saiu de podeAcessar e nomeDoPapel. O
+    formulário de usuários oferece só os três papéis, e um POST com
+    "coordenador" é rejeitado.
+  - README: a lista de papéis e de usuários de teste foi atualizada.
   - Testes: 100 exemplos, 0 falhas.

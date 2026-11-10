@@ -50,7 +50,7 @@ modelos que o IHP gera a partir de `Application/Schema.sql`: `Student`, `Course`
 ## Autenticação e Cadastro
 
 O sistema tem login por e-mail/senha, bloqueio de conta após tentativas erradas (IHP `Lockable`),
-papéis com permissões (`admin`, `coordenador`, `professor`, `aluno`) e **cadastro público** de novos
+papéis com permissões (`admin`, `professor`, `aluno`) e **cadastro público** de novos
 usuários (`/Register`), que entram com o papel `aluno`.
 
 A criptografia e a configuração ficam isoladas no módulo `Application.Security`:
@@ -80,7 +80,7 @@ A criptografia e a configuração ficam isoladas no módulo `Application.Securit
 ### Usuários de teste (fixtures)
 
 Senha de todos: `senha123` (apenas para desenvolvimento). E-mails:
-`admin@`, `coordenador@`, `professor@`, `aluno@` `schoolcontrol.dev`.
+`admin@`, `professor@`, `aluno@` `schoolcontrol.dev`.
 
 ### Configuração por ambiente
 
