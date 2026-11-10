@@ -18,7 +18,7 @@ defaultLayout inner = [hsx|
         {stylesheets}
         {scripts}
 
-        <title>{pageTitleOrDefault "schoolControl"}</title>
+        <title>{pageTitleOrDefault nomeDoSistema}</title>
     </head>
     <body>
         {navbar}
@@ -37,7 +37,7 @@ navbar = [hsx|
         <div class="container">
             <a class="navbar-brand" href="/">
                 <span class="sga-brand-mark">SC</span>
-                <span>schoolControl</span>
+                <span>{nomeDoSistema}</span>
             </a>
             <div class="navbar-nav me-auto">
                 {forEach recursos linkDoMenu}
@@ -113,7 +113,7 @@ metaTags :: Html
 metaTags = [hsx|
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
-    <meta property="og:title" content="App"/>
+    <meta property="og:title" content={nomeDoSistema}/>
     <meta property="og:type" content="website"/>
     <meta property="og:url" content="TODO"/>
     <meta property="og:description" content="TODO"/>

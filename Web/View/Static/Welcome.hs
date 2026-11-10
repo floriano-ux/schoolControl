@@ -15,7 +15,7 @@ visitante = [hsx|
         <span class="sga-hero-eyebrow">Gestão acadêmica</span>
         <h1 class="sga-hero-title">Alunos, cursos, matrículas e notas num só lugar</h1>
         <p class="sga-hero-subtitle">
-            O schoolControl centraliza o controle acadêmico — com cálculo de médias,
+            O {nomeDoSistema} centraliza o controle acadêmico — com cálculo de médias,
             situação de cada aluno e relatórios — de um jeito simples e organizado.
         </p>
         <div class="sga-hero-actions">

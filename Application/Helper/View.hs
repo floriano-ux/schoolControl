@@ -1,5 +1,6 @@
 module Application.Helper.View
-    ( pode
+    ( nomeDoSistema
+    , pode
     , formatarNota
     , formatarMedia
     , linkExcluir
@@ -15,6 +16,9 @@ import Application.Domain
 import Text.Printf (printf)
 
 -- Here you can add functions which are available in all your views
+
+nomeDoSistema :: Text
+nomeDoSistema = "School Control"
 
 -- O usuário logado pode executar a operação no recurso? (usado para esconder botões/links)
 pode operacao recurso = case currentUserOrNothing @User of

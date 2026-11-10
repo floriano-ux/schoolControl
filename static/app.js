@@ -12,11 +12,11 @@ function espelharFlashNoConsole() {
             return;
         }
         if (elemento.classList.contains('alert-danger')) {
-            console.error('[schoolControl] ' + mensagem);
+            console.error('[School Control] ' + mensagem);
         } else if (elemento.classList.contains('alert-warning')) {
-            console.warn('[schoolControl] ' + mensagem);
+            console.warn('[School Control] ' + mensagem);
         } else {
-            console.info('[schoolControl] ' + mensagem);
+            console.info('[School Control] ' + mensagem);
         }
     });
 }
