@@ -38,7 +38,7 @@ data Operacao
 --   Cursos       |   G   |      G      |     V     |   V
 --   Disciplinas  |   G   |      G      |     V     |   V
 --   Matrículas   |   G   |      G      |     -     |   -
---   Notas        |   G   |      V      |     G     |   -
+--   Notas        |   V   |      V      |    G*     |   -
 --   Relatórios   |   V   |      V      |     V     |   -
 --   Boletim      |   -   |      -      |     -     |   V
 --   Usuários     |   G   |      -      |     -     |   -
@@ -47,7 +47,11 @@ data Operacao
 -- (*) O professor só enxerga alunos, notas e relatórios das disciplinas que ministra (ver Escopo).
 -- Relatórios mostram dados de toda a instituição; o aluno vê apenas o próprio boletim.
 podeAcessar :: UserRole -> Operacao -> Recurso -> Bool
-podeAcessar Admin _ recurso = recurso /= Boletim
+-- Lançar notas é exclusivo do professor: admin e coordenador só visualizam.
+podeAcessar Admin operacao recurso = case recurso of
+    Boletim -> False
+    Notas   -> operacao == Visualizar
+    _       -> True
 podeAcessar Coordenador operacao recurso = case recurso of
     Usuarios -> False
     Boletim  -> False

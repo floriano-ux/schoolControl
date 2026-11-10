@@ -190,9 +190,13 @@ specs = do
             parseStatus "invalido" `shouldBe` Nothing
 
     describe "podeAcessar (papéis e permissões)" do
-        it "administrador pode tudo, exceto o boletim pessoal de aluno" do
-            and [ podeAcessar Admin op r | op <- [minBound .. maxBound], r <- [minBound .. maxBound], r /= Boletim ] `shouldBe` True
+        it "administrador pode tudo, exceto o boletim pessoal de aluno e lançar notas" do
+            and [ podeAcessar Admin op r | op <- [minBound .. maxBound], r <- [minBound .. maxBound], r `notElem` [Boletim, Notas] ] `shouldBe` True
             podeAcessar Admin Visualizar Boletim `shouldBe` False
+        it "só o professor lança, edita e exclui notas" do
+            map (\papel -> podeAcessar papel Gerenciar Notas) [Admin, Coordenador, Professor, Aluno]
+                `shouldBe` [False, False, True, False]
+            podeAcessar Admin Visualizar Notas `shouldBe` True
         it "só o administrador gerencia usuários" do
             map (\papel -> podeAcessar papel Visualizar Usuarios) [Admin, Coordenador, Professor, Aluno]
                 `shouldBe` [True, False, False, False]
