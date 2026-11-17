@@ -1,7 +1,12 @@
 module Application.Helper.Controller
     ( viaDominio
+    , viaSenha
     , exigirPermissao
-    , opcoesDeMatricula
+    , opcoesDeAluno
+    , carregarMatriculasDetalhadas
+    , buscarMatriculaDetalhada
+    , matriculasVisiveisPara
+    , exigirMatriculaVisivel
     , tentar
     , logAuthInfo
     , logAuthWarn
@@ -12,6 +17,7 @@ import Generated.Types
 import Web.Types
 import Web.Routes ()
 import Application.Domain
+import Application.Security (AuthConfig, avaliarForcaSenha, mensagemDaSenha)
 import Control.Exception (try, SomeException, displayException)
 import qualified Data.Text.IO as Text.IO
 import System.IO (stderr)
@@ -24,6 +30,11 @@ viaDominio :: (valor -> Either ErroValidacao valor) -> valor -> ValidatorResult
 viaDominio validar valor = case validar valor of
     Right _   -> Success
     Left erro -> Failure (mensagemDeErro erro)
+
+viaSenha :: AuthConfig -> Text -> ValidatorResult
+viaSenha config senha = case avaliarForcaSenha config senha of
+    Right ()  -> Success
+    Left erro -> Failure (mensagemDaSenha erro)
 
 -- Garante que há um usuário logado e que o papel dele permite a operação.
 -- Sem login: redireciona para a tela de login (e volta para cá depois de entrar).
@@ -70,14 +81,32 @@ logAuthWarn mensagem = escreverLog "WARN" ("[auth] " <> mensagem)
 escreverLog :: Text -> Text -> IO ()
 escreverLog nivel mensagem = Text.IO.hPutStrLn stderr ("[" <> nivel <> "] " <> mensagem)
 
--- Opções do select de matrícula, em ordem alfabética: "Aluno — Curso (status)".
-opcoesDeMatricula :: [Student] -> [Course] -> [Enrollment] -> [OpcaoMatricula]
-opcoesDeMatricula students courses enrollments =
-    sortOn (.rotulo) (map opcao enrollments)
-  where
-    opcao enrollment = OpcaoMatricula
-        { matriculaId = enrollment.id
-        , rotulo = nomeDoAluno students enrollment.studentId
-            <> " — " <> nomeDoCurso courses enrollment.courseId
-            <> " (" <> nomeDoStatus enrollment.status <> ")"
-        }
+-- Opções do select de aluno no lançamento de notas: "Aluno (status)".
+opcoesDeAluno :: [MatriculaDetalhada] -> [OpcaoMatricula]
+opcoesDeAluno = map \m -> OpcaoMatricula
+    { matriculaId = m.matricula.id
+    , rotulo = m.aluno.name <> " (" <> nomeDoStatus m.matricula.status <> ")"
+    }
+
+carregarMatriculasDetalhadas :: (?modelContext :: ModelContext) => IO [MatriculaDetalhada]
+carregarMatriculasDetalhadas = do
+    users       <- query @User |> fetch
+    subjects    <- query @Subject |> fetch
+    courses     <- query @Course |> fetch
+    enrollments <- query @Enrollment |> fetch
+    pure (detalharMatriculas users subjects courses enrollments)
+
+buscarMatriculaDetalhada :: (?modelContext :: ModelContext) => Id Enrollment -> IO MatriculaDetalhada
+buscarMatriculaDetalhada enrollmentId = do
+    enrollment <- fetch enrollmentId
+    student    <- fetch enrollment.studentId
+    subject    <- fetch enrollment.subjectId
+    course     <- fetch subject.courseId
+    pure MatriculaDetalhada { matricula = enrollment, aluno = student, disciplina = subject, curso = course }
+
+matriculasVisiveisPara :: (?modelContext :: ModelContext) => User -> IO [MatriculaDetalhada]
+matriculasVisiveisPara user = matriculasVisiveis user <$> carregarMatriculasDetalhadas
+
+-- 404 quando a matrícula não pertence ao escopo do usuário (ex.: disciplina de outro professor).
+exigirMatriculaVisivel :: (?request :: Request, ?respond :: Respond) => User -> MatriculaDetalhada -> IO ()
+exigirMatriculaVisivel user detalhe = notFoundWhen (not (matriculaVisivel user detalhe))

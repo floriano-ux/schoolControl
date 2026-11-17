@@ -19,22 +19,36 @@ instance Controller UsersController where
         user <- fetch userId
         config <- carregarAuthConfig
         let documento = decifrarOpcional config user.document
-        render ShowView { user, documento }
+        subjects    <- query @Subject |> orderBy #name |> fetch
+        courses     <- query @Course |> fetch
+        professores <- query @User |> filterWhere (#userRole, Professor) |> fetch
+        let disciplinas = sortOn rotuloDaDisciplina (disciplinasComCurso courses subjects)
+        render ShowView { user, documento, disciplinas, professores }
+
+    action AtribuirDisciplinasAction { userId } = do
+        professor <- fetch userId
+        notFoundWhen (professor.userRole /= Professor)
+        subjects <- query @Subject |> fetch
+        let alteradas = redistribuirDisciplinas professor.id (paramList @(Id Subject) "subjectIds") subjects
+        mapM_ updateRecord alteradas
+        logAuthInfo ("disciplinas do professor " <> professor.email <> " atualizadas pelo admin")
+        setSuccessMessage "Disciplinas do professor atualizadas"
+        redirectTo ShowUserAction { userId }
 
     action NewUserAction = do
         let user = newRecord @User
         render NewView { .. }
 
     action CreateUserAction = do
+        config <- carregarAuthConfig
         let user = newRecord @User
         user
             |> buildUser
-            |> validateField #passwordHash (hasMinLength 6 |> withCustomErrorMessage "A senha precisa ter pelo menos 6 caracteres")
+            |> validateField #passwordHash (viaSenha config)
             |> validarEmailDeUsuarioUnico
             >>= ifValid \case
                 Left user -> render NewView { user = user |> set #passwordHash "" }
                 Right user -> do
-                    config <- carregarAuthConfig
                     resultado <- tentar "usuarios" do
                         hashed <- gerarHashSenha config user.passwordHash
                         documento <- cifrarOpcional config (param @Text "document")
@@ -61,17 +75,19 @@ instance Controller UsersController where
             }
 
     action UpdateUserAction { userId } = do
+        config <- carregarAuthConfig
         user <- fetch userId
-        let hashAtual = user.passwordHash
-        let docAtual  = user.document
+        let hashAtual  = user.passwordHash
+        let docAtual   = user.document
+        let papelAtual = user.userRole
         user
             |> buildUser
-            |> validateField #passwordHash senhaOpcional
+            |> validateField #passwordHash (senhaOpcional config)
             |> validarEmailDeUsuarioUnico
+            >>= validarTrocaDePapel papelAtual
             >>= ifValid \case
                 Left user -> render EditView { user = user |> set #passwordHash "", documento = "" }
                 Right user -> do
-                    config <- carregarAuthConfig
                     resultado <- tentar "usuarios" do
                         novoHash <- if Text.null user.passwordHash
                             then pure hashAtual
@@ -107,10 +123,19 @@ buildUser user = user
     |> validateField #name (nonEmpty |> withCustomErrorMessage "Informe o nome")
     |> validateField #email (isEmail |> withCustomErrorMessage "Informe um e-mail válido")
 
-senhaOpcional :: Text -> ValidatorResult
-senhaOpcional senha
+senhaOpcional :: AuthConfig -> Text -> ValidatorResult
+senhaOpcional config senha
     | Text.null senha = Success
-    | otherwise       = senha |> (hasMinLength 6 |> withCustomErrorMessage "A senha precisa ter pelo menos 6 caracteres")
+    | otherwise       = viaSenha config senha
 
 validarEmailDeUsuarioUnico user = user
     |> withCustomErrorMessageIO "Este e-mail já está em uso" validateIsUnique #email
+
+validarTrocaDePapel papelAtual user = do
+    vinculos <- case papelAtual of
+        Aluno     -> query @Enrollment |> filterWhere (#studentId, user.id) |> fetchCount
+        Professor -> query @Subject |> filterWhere (#professorId, Just user.id) |> fetchCount
+        _         -> pure 0
+    pure if podeTrocarPapel papelAtual user.userRole vinculos
+        then user
+        else user |> attachFailure #userRole (mensagemTrocaDePapel papelAtual)

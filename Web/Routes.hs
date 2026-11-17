@@ -17,6 +17,7 @@ GET /ShowStudent?studentId ShowStudentAction
 GET /EditStudent?studentId EditStudentAction
 POST /UpdateStudent?studentId UpdateStudentAction
 DELETE /DeleteStudent?studentId DeleteStudentAction
+POST /RegenerarSenha?studentId RegenerarSenhaAction
 |]
 
 
@@ -28,6 +29,16 @@ GET /ShowCourse?courseId ShowCourseAction
 GET /EditCourse?courseId EditCourseAction
 POST /UpdateCourse?courseId UpdateCourseAction
 DELETE /DeleteCourse?courseId DeleteCourseAction
+|]
+
+[routes|SubjectsController
+GET /Subjects SubjectsAction
+GET /NewSubject NewSubjectAction
+POST /CreateSubject CreateSubjectAction
+GET /ShowSubject?subjectId ShowSubjectAction
+GET /EditSubject?subjectId EditSubjectAction
+POST /UpdateSubject?subjectId UpdateSubjectAction
+DELETE /DeleteSubject?subjectId DeleteSubjectAction
 |]
 
 [routes|EnrollmentsController
@@ -54,6 +65,10 @@ DELETE /DeleteGrade?gradeId DeleteGradeAction
 GET /Reports ReportsAction
 |]
 
+[routes|BoletimController
+GET /MeuBoletim MeuBoletimAction
+|]
+
 [routes|UsersController
 GET /Users UsersAction
 GET /NewUser NewUserAction
@@ -62,6 +77,7 @@ GET /ShowUser?userId ShowUserAction
 GET /EditUser?userId EditUserAction
 POST /UpdateUser?userId UpdateUserAction
 DELETE /DeleteUser?userId DeleteUserAction
+POST /AtribuirDisciplinas?userId AtribuirDisciplinasAction
 |]
 
 [routes|SessionsController

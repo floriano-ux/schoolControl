@@ -13,11 +13,12 @@ data StaticController = WelcomeAction deriving (Eq, Show, Data)
 data StudentsController
     = StudentsAction
     | NewStudentAction
-    | ShowStudentAction { studentId :: !(Id Student) }
+    | ShowStudentAction { studentId :: !(Id User) }
     | CreateStudentAction
-    | EditStudentAction { studentId :: !(Id Student) }
-    | UpdateStudentAction { studentId :: !(Id Student) }
-    | DeleteStudentAction { studentId :: !(Id Student) }
+    | EditStudentAction { studentId :: !(Id User) }
+    | UpdateStudentAction { studentId :: !(Id User) }
+    | DeleteStudentAction { studentId :: !(Id User) }
+    | RegenerarSenhaAction { studentId :: !(Id User) }
     deriving (Eq, Show, Data)
 
 data CoursesController
@@ -28,6 +29,16 @@ data CoursesController
     | EditCourseAction { courseId :: !(Id Course) }
     | UpdateCourseAction { courseId :: !(Id Course) }
     | DeleteCourseAction { courseId :: !(Id Course) }
+    deriving (Eq, Show, Data)
+
+data SubjectsController
+    = SubjectsAction
+    | NewSubjectAction
+    | ShowSubjectAction { subjectId :: !(Id Subject) }
+    | CreateSubjectAction
+    | EditSubjectAction { subjectId :: !(Id Subject) }
+    | UpdateSubjectAction { subjectId :: !(Id Subject) }
+    | DeleteSubjectAction { subjectId :: !(Id Subject) }
     deriving (Eq, Show, Data)
 
 data EnrollmentsController
@@ -54,6 +65,10 @@ data ReportsController
     = ReportsAction
     deriving (Eq, Show, Data)
 
+data BoletimController
+    = MeuBoletimAction
+    deriving (Eq, Show, Data)
+
 data UsersController
     = UsersAction
     | NewUserAction
@@ -62,6 +77,7 @@ data UsersController
     | EditUserAction { userId :: !(Id User) }
     | UpdateUserAction { userId :: !(Id User) }
     | DeleteUserAction { userId :: !(Id User) }
+    | AtribuirDisciplinasAction { userId :: !(Id User) }
     deriving (Eq, Show, Data)
 
 data SessionsController
@@ -77,7 +93,7 @@ data RegistrationsController
     deriving (Eq, Show, Data)
 
 
--- Item do select de matrículas na tela de Notas ("Aluno — Curso (status)").
+-- Item do select de aluno no lançamento de notas ("Aluno (status)").
 data OpcaoMatricula = OpcaoMatricula
     { matriculaId :: !(Id Enrollment)
     , rotulo      :: !Text

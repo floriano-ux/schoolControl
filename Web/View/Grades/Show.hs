@@ -2,10 +2,8 @@ module Web.View.Grades.Show where
 import Web.View.Prelude
 
 data ShowView = ShowView
-    { grade      :: Grade
-    , enrollment :: Enrollment
-    , student    :: Student
-    , course     :: Course
+    { grade   :: Grade
+    , detalhe :: MatriculaDetalhada
     }
 
 instance View ShowView where
@@ -20,7 +18,7 @@ instance View ShowView where
 
         <div class="card mb-4">
             <div class="card-header">
-                <strong>{student.name}</strong> — {course.name}
+                <strong>{detalhe.aluno.name}</strong> — {detalhe.disciplina.name} / {detalhe.curso.name}
             </div>
             <div class="card-body">
                 <div class="row g-3">
@@ -57,7 +55,7 @@ instance View ShowView where
                                 <div class="text-muted small">Nota Final (NF)</div>
                                 <div class="fs-4 fw-bold text-primary">{formatarNota (mediaFinal grade)}</div>
                                 <div class="small mt-1 d-flex align-items-center gap-2">
-                                    {badgeSituacao (situacaoDaMatricula enrollment.status grade)}
+                                    {badgeSituacao (situacaoDaMatricula detalhe.matricula.status grade)}
                                     <span class="fw-semibold">Conceito {show (classificarMedia (mediaFinal grade))}</span>
                                 </div>
                             </div>

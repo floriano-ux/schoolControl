@@ -20,7 +20,7 @@ renderForm user = formFor user [hsx|
     {(textField #name) { fieldLabel = "Nome" }}
     {(emailField #email) { fieldLabel = "E-mail" }}
     {(selectField #userRole papeis) { fieldLabel = "Papel" }}
-    {(passwordField #passwordHash) { fieldLabel = "Senha", helpText = "Mínimo de 6 caracteres" }}
+    {(passwordField #passwordHash) { fieldLabel = "Senha", helpText = "Mínimo de 8 caracteres, com pelo menos um número e uma letra maiúscula" }}
     <div class="form-group mb-3">
         <label class="form-label" for="document">CPF</label>
         <input id="document" name="document" type="text" class="form-control" placeholder="Opcional — guardado cifrado" />

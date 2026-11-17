@@ -1,11 +1,7 @@
 module Web.View.Enrollments.Index where
 import Web.View.Prelude
 
-data IndexView = IndexView
-    { enrollments :: [Enrollment]
-    , students    :: [Student]
-    , courses     :: [Course]
-    }
+data IndexView = IndexView { matriculas :: [MatriculaDetalhada] }
 
 instance View IndexView where
     html IndexView { .. } = [hsx|
@@ -18,11 +14,11 @@ instance View IndexView where
                     <thead>
                         <tr>
                             <th>Aluno</th>
+                            <th>Disciplina</th>
                             <th>Curso</th>
                             <th>Status</th>
                             <th></th>
-                            <th></th>
-                            <th></th>
+                            {when (pode Gerenciar Matriculas) colunasDeAcao}
                         </tr>
                     </thead>
                     <tbody>{forEach linhas renderLinha}</tbody>
@@ -36,18 +32,16 @@ instance View IndexView where
                 ]
             novaMatricula = [hsx|<a href={pathTo NewEnrollmentAction} class="btn btn-primary">+ Nova matrícula</a>|]
 
-            -- "JOIN" em memória e ordenação por aluno e curso
-            linhas = sortOn (\(aluno, curso, _) -> (aluno, curso))
-                [ (nomeDoAluno students e.studentId, nomeDoCurso courses e.courseId, e) | e <- enrollments ]
+            linhas = sortOn (\m -> (m.aluno.name, m.curso.name, m.disciplina.name)) matriculas
 
-            renderLinha (aluno, curso, enrollment) = [hsx|
+            renderLinha m = [hsx|
                 <tr>
-                    <td>{aluno}</td>
-                    <td>{curso}</td>
-                    <td>{badgeStatus enrollment.status}</td>
-                    <td><a href={ShowEnrollmentAction enrollment.id}>Ver</a></td>
-                    <td>{when (pode Gerenciar Matriculas) (editar enrollment)}</td>
-                    <td>{when (pode Gerenciar Matriculas) (linkExcluir (pathTo (DeleteEnrollmentAction enrollment.id)))}</td>
+                    <td>{m.aluno.name}</td>
+                    <td>{m.disciplina.name}</td>
+                    <td>{m.curso.name}</td>
+                    <td>{badgeStatus m.matricula.status}</td>
+                    <td><a href={ShowEnrollmentAction m.matricula.id}>Ver</a></td>
+                    {when (pode Gerenciar Matriculas) (celulasDeAcao (editar m.matricula) (linkExcluir (pathTo (DeleteEnrollmentAction m.matricula.id))))}
                 </tr>
             |]
 

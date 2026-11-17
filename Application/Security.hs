@@ -17,7 +17,7 @@ module Application.Security
     ) where
 
 import IHP.Prelude
-import Data.Char (isDigit, isLetter)
+import Data.Char (isDigit, isLetter, isUpper)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as TE
 import qualified Data.ByteString as BS
@@ -78,6 +78,7 @@ data ErroSenha
     = SenhaMuitoCurta Int
     | SenhaSemNumero
     | SenhaSemLetra
+    | SenhaSemMaiuscula
     deriving (Eq, Show)
 
 mensagemDaSenha :: ErroSenha -> Text
@@ -85,6 +86,7 @@ mensagemDaSenha erro = case erro of
     SenhaMuitoCurta minimo -> "A senha precisa ter pelo menos " <> tshow minimo <> " caracteres"
     SenhaSemNumero         -> "A senha precisa conter pelo menos um número"
     SenhaSemLetra          -> "A senha precisa conter pelo menos uma letra"
+    SenhaSemMaiuscula      -> "A senha precisa conter pelo menos uma letra maiúscula"
 
 tamanhoMinimoSenha :: Reader AuthConfig Int
 tamanhoMinimoSenha = asks (.minPasswordLength)
@@ -96,6 +98,7 @@ validarForcaSenha senha = do
         | Text.length senha < minimo    -> Left (SenhaMuitoCurta minimo)
         | not (Text.any isDigit senha)  -> Left SenhaSemNumero
         | not (Text.any isLetter senha) -> Left SenhaSemLetra
+        | not (Text.any isUpper senha)  -> Left SenhaSemMaiuscula
         | otherwise                     -> Right ()
 
 -- Executa o Reader com a config dada

@@ -16,8 +16,7 @@ instance View IndexView where
                             <th>Nome</th>
                             <th>Carga horária</th>
                             <th></th>
-                            <th></th>
-                            <th></th>
+                            {when (pode Gerenciar Cursos) colunasDeAcao}
                         </tr>
                     </thead>
                     <tbody>{forEach courses renderCourse}</tbody>
@@ -37,8 +36,7 @@ renderCourse course = [hsx|
         <td>{course.name}</td>
         <td>{course.workload} h</td>
         <td><a href={ShowCourseAction course.id}>Ver</a></td>
-        <td>{when (pode Gerenciar Cursos) editar}</td>
-        <td>{when (pode Gerenciar Cursos) (linkExcluir (pathTo (DeleteCourseAction course.id)))}</td>
+        {when (pode Gerenciar Cursos) (celulasDeAcao editar (linkExcluir (pathTo (DeleteCourseAction course.id))))}
     </tr>
 |]
     where

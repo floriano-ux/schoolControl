@@ -3,7 +3,9 @@ import Web.View.Prelude
 
 data ShowView = ShowView
     { user      :: User
-    , documento :: Maybe Text
+    , documento   :: Maybe Text
+    , disciplinas :: [(Subject, Course)]
+    , professores :: [User]
     }
 
 instance View ShowView where
@@ -33,10 +35,41 @@ instance View ShowView where
                 </dl>
             </div>
         </div>
+        {when (user.userRole == Professor) disciplinasMinistradas}
     |]
         where
             breadcrumb = renderBreadcrumb
                 [ breadcrumbLink "Usuários" UsersAction
                 , breadcrumbText "Detalhes do usuário"
                 ]
-
+            disciplinasMinistradas = [hsx|
+                <div class="card">
+                    <div class="card-header">Disciplinas que ministra</div>
+                    <div class="card-body">
+                        <p class="text-muted small">
+                            Marque as disciplinas deste professor. Uma disciplina tem um único professor:
+                            marcar uma disciplina de outro professor transfere a disciplina para este.
+                        </p>
+                        <form method="POST" action={AtribuirDisciplinasAction user.id}>
+                            {forEach disciplinas opcaoDisciplina}
+                            {when (null disciplinas) nenhuma}
+                            <button type="submit" class="btn btn-primary mt-3">Salvar disciplinas</button>
+                        </form>
+                    </div>
+                </div>
+            |]
+            opcaoDisciplina par@(subject, _) = [hsx|
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="subjectIds"
+                           id={"disciplina-" <> tshow subject.id} value={inputValue subject.id}
+                           checked={subject.professorId == Just user.id}/>
+                    <label class="form-check-label" for={"disciplina-" <> tshow subject.id}>
+                        {rotuloDaDisciplina par} {responsavelAtual subject}
+                    </label>
+                </div>
+            |]
+            responsavelAtual subject
+                | subject.professorId == Just user.id = mempty
+                | isNothing subject.professorId       = mempty
+                | otherwise = [hsx|<small class="text-muted">(atual: {nomeDoProfessor professores subject})</small>|]
+            nenhuma = [hsx|<p class="text-muted mb-0">Nenhuma disciplina cadastrada.</p>|]

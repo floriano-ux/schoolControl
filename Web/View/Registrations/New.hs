@@ -15,7 +15,7 @@ instance View NewView where
                     <div class="card-body p-4">
                         <div class="sga-auth-head">
                             <span class="sga-auth-mark">SC</span>
-                            <h1 class="h4 mb-1">Criar conta no schoolControl</h1>
+                            <h1 class="h4 mb-1">{"Criar conta no " <> nomeDoSistema}</h1>
                             <p class="sga-auth-sub mb-0">Crie sua conta de aluno em segundos</p>
                         </div>
                         {renderForm nome email}
@@ -42,7 +42,7 @@ renderForm nome email = [hsx|
         <div class="mb-3">
             <label class="form-label" for="password">Senha</label>
             <input id="password" name="password" type="password" class="form-control" required="required" />
-            <div class="form-text">Mínimo de 8 caracteres, com ao menos uma letra e um número.</div>
+            <div class="form-text">Mínimo de 8 caracteres, com pelo menos um número e uma letra maiúscula.</div>
         </div>
         <div class="mb-3">
             <label class="form-label" for="passwordConfirmation">Confirmar senha</label>

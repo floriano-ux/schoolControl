@@ -1,9 +1,12 @@
 module Application.Helper.View
-    ( pode
+    ( nomeDoSistema
+    , pode
     , formatarNota
     , formatarMedia
     , linkExcluir
     , cabecalhoPagina
+    , colunasDeAcao
+    , celulasDeAcao
     , badgeStatus
     , badgeSituacao
     ) where
@@ -15,6 +18,9 @@ import Application.Domain
 import Text.Printf (printf)
 
 -- Here you can add functions which are available in all your views
+
+nomeDoSistema :: Text
+nomeDoSistema = "School Control"
 
 -- O usuário logado pode executar a operação no recurso? (usado para esconder botões/links)
 pode operacao recurso = case currentUserOrNothing @User of
@@ -37,6 +43,13 @@ linkExcluir :: Text -> Html
 linkExcluir caminho = [hsx|
     <a href={caminho} class="js-delete text-danger" data-confirm="Tem certeza que deseja excluir?">Excluir</a>
 |]
+
+-- Cabeçalhos das colunas Editar/Excluir, exibidos só para quem pode gerenciar.
+colunasDeAcao :: Html
+colunasDeAcao = [hsx|<th></th><th></th>|]
+
+celulasDeAcao :: Html -> Html -> Html
+celulasDeAcao editar excluir = [hsx|<td>{editar}</td><td>{excluir}</td>|]
 
 -- Cabeçalho de página: título à esquerda e uma ação opcional (ex.: botão "+ Novo") à direita.
 cabecalhoPagina :: Text -> Html -> Html
@@ -71,10 +84,15 @@ badgeSituacao situacao = [hsx|<span class={"badge " <> cor}>{nomeDaSituacao situ
 
 -- Opções dos <select> dos formulários
 
-instance CanSelect Student where
-    type SelectValue Student = Id Student
-    selectValue student = student.id
-    selectLabel student = student.name
+instance CanSelect User where
+    type SelectValue User = Id User
+    selectValue user = user.id
+    selectLabel user = user.name
+
+instance CanSelect (Subject, Course) where
+    type SelectValue (Subject, Course) = Id Subject
+    selectValue (subject, _) = subject.id
+    selectLabel = rotuloDaDisciplina
 
 instance CanSelect Course where
     type SelectValue Course = Id Course
